@@ -9,6 +9,7 @@ var lahm = null
 func _ready() -> void:
 	super._ready()
 	add_to_group("interactable")
+	add_to_group("remote_players")
 	speed = 240.0
 
 

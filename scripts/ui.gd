@@ -914,6 +914,9 @@ func start_fishing(pond_pos: Vector2) -> void:
 		if GameState.FISH[id].get("season", -1) == GameState.season():
 			seasonal = GameState.item_name(id)
 	fish_label.text = "等待鱼儿上钩……（太早收杆会把鱼吓跑哦）\n%s季限定：%s" % [GameState.season_name(), seasonal]
+	var pal := fishing_buddy()
+	if pal != "":
+		fish_label.text += "\n和 %s 一起钓鱼，更容易钓到金鱼！" % pal
 	Sfx.play("splash")
 	fish_panel.visible = true
 	fish_bar.queue_redraw()
@@ -990,6 +993,16 @@ func _reel() -> void:
 			_fish_end("没拉住，鱼跑掉了！")
 
 
+## 附近（300 像素内）正在钓鱼的好友名字，没有返回 ""
+func fishing_buddy() -> String:
+	if player == null:
+		return ""
+	for r in get_tree().get_nodes_in_group("remote_players"):
+		if r.visible and r.fishing and r.position.distance_to(player.position) < 300.0:
+			return r.display_name
+	return ""
+
+
 func _fish_weight(id: String) -> int:
 	var info: Dictionary = GameState.FISH[id]
 	if info.has("season") and int(info["season"]) != GameState.season():
@@ -1000,6 +1013,8 @@ func _fish_weight(id: String) -> int:
 			w *= 2
 		if GameState.rod_level >= 2:
 			w = roundi(w * 1.5)  # 金鱼竿更容易钓到金鱼
+		if fishing_buddy() != "":
+			w = roundi(w * 1.5)  # 和好友一起钓鱼运气更好
 	return w
 
 
