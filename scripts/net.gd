@@ -10,6 +10,7 @@ signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
 signal item_received(id: int, item: String, n: int)
 signal board_changed
+signal rooms_changed
 signal peer_emote(id: int, kind: String)
 signal visit_changed
 signal farm_visitor_joined(id: int)
@@ -31,6 +32,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_failed)
 	multiplayer.server_disconnected.connect(_on_server_gone)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	room_id = "%08x" % randi()
 
 
 func is_online() -> bool:
@@ -66,6 +68,8 @@ func host(port: int) -> String:
 		return "创建房间失败，端口 %d 可能已被占用" % port
 	multiplayer.multiplayer_peer = peer
 	players = {1: my_info()}
+	_host_port = port
+	stop_discovery()
 	_set_status("房间已创建（端口 %d），等待小伙伴加入" % port)
 	roster_changed.emit()
 	return ""
@@ -369,3 +373,78 @@ func sync_board(b: Array) -> void:
 		if typeof(m) == TYPE_DICTIONARY:
 			remote_board.append({"name": str(m.get("name", "")).left(10), "text": str(m.get("text", "")).left(40), "day": int(m.get("day", 1))})
 	board_changed.emit()
+
+
+# ---------- 局域网自动发现房间 ----------
+# 房主每秒用 UDP 广播一次房间信息（同时发给本机，方便一台电脑开两个窗口测试），
+# 打开联机面板的玩家监听这个端口，把收到的房间列出来，一键加入。
+
+const DISCOVERY_PORT := 7778
+
+var room_id := ""
+var rooms := {}  # room_id -> {"ip", "port", "name", "players", "seen"}
+var _beacon: PacketPeerUDP = null
+var _listener: PacketPeerUDP = null
+var _beacon_timer := 0.0
+var _host_port := 0
+
+
+func _process(delta: float) -> void:
+	if is_online() and multiplayer.is_server():
+		_beacon_timer -= delta
+		if _beacon_timer <= 0.0:
+			_beacon_timer = 1.0
+			_send_beacon()
+	if _listener != null:
+		_poll_rooms()
+
+
+func _send_beacon() -> void:
+	if _beacon == null:
+		_beacon = PacketPeerUDP.new()
+		_beacon.set_broadcast_enabled(true)
+	var data := JSON.stringify({"game": "mole_town", "id": room_id, "name": GameState.player_name,
+		"port": _host_port, "players": players.size()}).to_utf8_buffer()
+	for addr in ["255.255.255.255", "127.0.0.1"]:
+		_beacon.set_dest_address(addr, DISCOVERY_PORT)
+		_beacon.put_packet(data)
+
+
+func start_discovery() -> bool:
+	if _listener != null:
+		return true
+	_listener = PacketPeerUDP.new()
+	if _listener.bind(DISCOVERY_PORT) != OK:
+		_listener = null
+		return false
+	return true
+
+
+func stop_discovery() -> void:
+	if _listener != null:
+		_listener.close()
+		_listener = null
+	rooms.clear()
+	rooms_changed.emit()
+
+
+func _poll_rooms() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var changed := false
+	while _listener.get_available_packet_count() > 0:
+		var pkt := _listener.get_packet()
+		var ip := _listener.get_packet_ip()
+		var d = JSON.parse_string(pkt.get_string_from_utf8())
+		if typeof(d) != TYPE_DICTIONARY or d.get("game", "") != "mole_town" or str(d.get("id", "")) == room_id:
+			continue
+		var id := str(d.get("id", ""))
+		if not rooms.has(id):
+			changed = true
+		rooms[id] = {"ip": ip, "port": clampi(int(d.get("port", DEFAULT_PORT)), 1, 65535),
+			"name": str(d.get("name", "")).left(10), "players": clampi(int(d.get("players", 1)), 0, 99), "seen": now}
+	for id in rooms.keys():
+		if now - float(rooms[id]["seen"]) > 4.0:
+			rooms.erase(id)
+			changed = true
+	if changed:
+		rooms_changed.emit()

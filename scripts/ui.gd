@@ -53,6 +53,7 @@ var ip_edit: LineEdit
 var port_edit: LineEdit
 var net_status: Label
 var net_list: Label
+var rooms_list: VBoxContainer
 var profile  # ui_profile.gd：设置、表情、捏脸
 var progress  # ui_progress.gd：图鉴、成就、签到
 var minimap_panel: PanelContainer
@@ -345,6 +346,10 @@ func _build_net() -> void:
 	hb.add_child(_button("断开", func(): Net.leave()))
 	v.add_child(hb)
 
+	v.add_child(_label("附近的房间（同一个局域网里的房主会自动出现在这里）", 15))
+	rooms_list = VBoxContainer.new()
+	v.add_child(rooms_list)
+	Net.rooms_changed.connect(_refresh_rooms)
 	net_status = _label("", 16)
 	net_status.add_theme_color_override("font_color", Color(0.15, 0.45, 0.75))
 	v.add_child(net_status)
@@ -367,6 +372,11 @@ func toggle_net() -> void:
 	net_panel.visible = not net_panel.visible
 	if net_panel.visible:
 		name_edit.text = GameState.player_name
+		if not Net.is_online():
+			Net.start_discovery()
+	else:
+		Net.stop_discovery()
+	_refresh_rooms()
 
 
 func _apply_name() -> void:
@@ -1044,3 +1054,35 @@ func _refresh_tutorial() -> void:
 	tut_box.visible = GameState.tutorial_active()
 	if tut_box.visible:
 		tut_label.text = "新手引导（%d/%d）：%s" % [GameState.tutorial_step + 1, GameState.TUTORIAL.size(), GameState.TUTORIAL[GameState.tutorial_step]["text"]]
+
+
+func _refresh_rooms() -> void:
+	if rooms_list == null:
+		return
+	for c in rooms_list.get_children():
+		c.queue_free()
+	if Net.is_online():
+		return
+	if Net.rooms.is_empty():
+		var l := _label("正在寻找……（也可以在下面手动输入房主 IP）", 14)
+		l.add_theme_color_override("font_color", Color(0.55, 0.5, 0.45))
+		rooms_list.add_child(l)
+		return
+	for id in Net.rooms:
+		var r: Dictionary = Net.rooms[id]
+		var hb := HBoxContainer.new()
+		var l := _label("%s 的房间 · %d 人 · %s" % [r["name"], int(r["players"]), r["ip"]], 15)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hb.add_child(l)
+		hb.add_child(_button("加入", _join_room.bind(str(r["ip"]), int(r["port"]))))
+		rooms_list.add_child(hb)
+
+
+func _join_room(ip: String, port: int) -> void:
+	_apply_name()
+	Net.stop_discovery()
+	ip_edit.text = ip
+	port_edit.text = str(port)
+	var err := Net.join(ip, port)
+	if err != "":
+		show_toast(err)
