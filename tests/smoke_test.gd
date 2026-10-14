@@ -107,11 +107,13 @@ func _run() -> void:
 	var caught := 0
 	for f in GameState.FISH:
 		caught += GameState.count(f)
+	var beans_before := GameState.beans
 	ui._reel()
 	var caught2 := 0
 	for f in GameState.FISH:
 		caught2 += GameState.count(f)
-	check(caught2 == caught + 1, "在绿区收杆钓到东西")
+	# 约 9% 的概率钓到宝箱 / 漂流瓶（给摩尔豆而不是鱼），两种都算钓到东西
+	check(caught2 == caught + 1 or GameState.beans > beans_before, "在绿区收杆钓到东西")
 	ui._stop_fishing()
 	check(not p.fishing, "结束钓鱼")
 
@@ -320,6 +322,31 @@ func _run() -> void:
 	ui.open_mail()
 	check(ui.mailui.panel.visible, "打开信箱")
 	ui._close_all()
+
+	print("[随机事件]")
+	GameState.minutes = 22.5 * 60.0
+	main.events.start_shower()
+	main.events.meteors.append([Vector2(400, 200), 1.0])
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	ev.position = Vector2(400, 200)
+	main.events._unhandled_input(ev)
+	check(main.events.wishes == 1, "点流星许愿")
+	main.events.shower = 0.0
+	GameState.minutes = 9.0 * 60.0
+	main.events.spawn_lost_lahm()
+	var lost = get_tree().get_first_node_in_group("lost_lahm")
+	check(lost != null, "迷路的小拉姆出现")
+	lost.interact(p)
+	var lele_npc = null
+	for n in get_tree().get_nodes_in_group("npcs"):
+		if n.role == "lele":
+			lele_npc = n
+	var aff0 := GameState.affinity("乐乐")
+	main.teleport(lele_npc.position + Vector2(100, 0))
+	await get_tree().create_timer(1.5).timeout
+	check(get_tree().get_nodes_in_group("lost_lahm").is_empty() and GameState.affinity("乐乐") == aff0 + 10, "把小拉姆送回乐乐那里")
 
 	print("[界面大小]")
 	ui.set_ui_scale(1.3)

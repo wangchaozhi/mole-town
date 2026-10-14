@@ -58,6 +58,10 @@ func _draw() -> void:
 		for r in main.remotes.values():
 			if r.visible:
 				draw_circle(_m(r.position), 3.5, Color(0.25, 0.55, 1.0))
+		for l in get_tree().get_nodes_in_group("lost_lahm"):
+			if not l.following:
+				draw_circle(_m(l.position), 5.0, Color(0.45, 0.65, 0.95))
+				D_text(_m(l.position) + Vector2(0, -8), "?")
 		var lahm = get_tree().get_first_node_in_group("my_lahm")
 		if lahm != null and not main.inside:
 			draw_circle(_m(lahm.position), 2.5, Color(1, 0.6, 0.75))
@@ -65,3 +69,8 @@ func _draw() -> void:
 		draw_circle(pp, 5.0, Color.WHITE)
 		draw_circle(pp, 3.8, Color(0.9, 0.1, 0.15))
 	draw_rect(Rect2(Vector2.ZERO, s), Color(0.45, 0.3, 0.15), false, 2.0)
+
+
+func D_text(p: Vector2, s: String) -> void:
+	var f: Font = ThemeDB.fallback_font
+	draw_string(f, p + Vector2(-4, 0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.95, 0.4, 0.15))

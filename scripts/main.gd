@@ -20,6 +20,7 @@ const Interior = preload("res://scripts/interior.gd")
 const Spot = preload("res://scripts/spot.gd")
 const TutorialArrow = preload("res://scripts/tutorial_arrow.gd")
 const Sprinkler = preload("res://scripts/sprinkler.gd")
+const Events = preload("res://scripts/events.gd")
 const COTTAGE_POS := Vector2(1010, 1175)
 const INTERIOR_WALK := Rect2(3030, 320, 420, 185)
 const WORLD_WALK := Rect2(40, 150, 2320, 1210)
@@ -43,6 +44,7 @@ var plots := []
 var cam: Camera2D
 var zoom_level := 1.0
 var inside := false  # 是否在自己的小屋里
+var events  # 随机事件（流星雨、迷路的小拉姆）
 var room := "cottage"  # 当前所在的室内房间
 var rain_dim := 0.0
 var farm_sign
@@ -129,6 +131,9 @@ func _ready() -> void:
 	sky = CanvasModulate.new()
 	add_child(sky)
 	add_child(Rain.new())
+	events = Events.new()
+	events.main = self
+	add_child(events)
 	ui = UI.new()
 	ui.player = player
 	add_child(ui)
