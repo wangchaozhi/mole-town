@@ -11,7 +11,7 @@ signal gift_received(id: int, beans: int)
 signal peer_emote(id: int, kind: String)
 signal visit_changed
 signal farm_visitor_joined(id: int)
-signal farm_received(states: Array)
+signal farm_received(data)
 signal farm_action_requested(id: int, plot_id: int, action: String)
 signal farm_action_result(msg: String, item: String, beans: int)
 
@@ -242,7 +242,7 @@ func stop_visit() -> void:
 	visitors.erase(multiplayer.get_remote_sender_id())
 
 
-func push_farm(states: Array) -> void:
+func push_farm(states) -> void:
 	if not is_online():
 		visitors.clear()
 		return
@@ -254,7 +254,7 @@ func push_farm(states: Array) -> void:
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func farm_state(states: Array) -> void:
+func farm_state(states) -> void:
 	if multiplayer.get_remote_sender_id() == visiting:
 		farm_received.emit(states)
 

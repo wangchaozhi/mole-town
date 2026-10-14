@@ -11,6 +11,7 @@ const Lahm = preload("res://scripts/lahm.gd")
 const UI = preload("res://scripts/ui.gd")
 const RemoteMole = preload("res://scripts/remote_mole.gd")
 const Rain = preload("res://scripts/rain.gd")
+const Furniture = preload("res://scripts/furniture.gd")
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
@@ -19,6 +20,11 @@ var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
 var rain_dim := 0.0
 var farm_sign
+var home_sign
+var home_nodes: Array = []
+var ghost = null  # 摆放家具时跟随鼠标的预览
+var placing := ""
+var moving_index := -1  # 正在移动的已摆放家具下标
 var ysort: Node2D
 var player
 var pond
@@ -60,6 +66,7 @@ func _ready() -> void:
 
 	_build_props()
 	_build_farm()
+	_build_home(GameState.home, false)
 
 	player = PlayerScript.new()
 	player.position = Vector2(1200, 880)
@@ -142,11 +149,11 @@ func my_farm() -> int:
 	return Net.visiting if Net.visiting != 0 else Net.my_id()
 
 
-func _farm_states() -> Array:
+func _farm_states() -> Dictionary:
 	var out := []
 	for p in plots:
 		out.append(p.get_state())
-	return out
+	return {"plots": out, "home": GameState.home}
 
 
 func _on_visit_changed() -> void:
@@ -154,15 +161,21 @@ func _on_visit_changed() -> void:
 		for p in plots:
 			p.clear_remote()
 		farm_sign.text = "开心农场"
+		home_sign.text = "我的小院"
+		_build_home(GameState.home, false)
 	else:
 		for p in plots:
 			p.set_remote({})  # 收到主人数据前先显示空地
 		farm_sign.text = "%s的农场" % Net.player_name(Net.visiting)
+		home_sign.text = "%s的小院" % Net.player_name(Net.visiting)
+		cancel_placing()
+		_build_home([], true)
 		player.position = Vector2(1845, 1240)
 		player.target = player.position
 		player.moving = false
 		player.pending = null
 	farm_sign.queue_redraw()
+	home_sign.queue_redraw()
 
 
 func _on_farm_visitor(id: int) -> void:
@@ -170,9 +183,19 @@ func _on_farm_visitor(id: int) -> void:
 	Net.push_farm(_farm_states())
 
 
-func _on_farm_received(states: Array) -> void:
+func _on_farm_received(data) -> void:
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	var states: Array = data.get("plots", [])
 	for i in mini(states.size(), plots.size()):
 		plots[i].set_remote(states[i])
+	var list := []
+	for f in data.get("home", []):
+		if typeof(f) == TYPE_DICTIONARY and GameState.FURNITURE.has(str(f.get("id", ""))):
+			var p := Vector2(float(f.get("x", 0)), float(f.get("y", 0)))
+			if GameState.HOME_RECT.has_point(p):
+				list.append({"id": str(f["id"]), "x": p.x, "y": p.y})
+	_build_home(list.slice(0, 40), true)
 
 
 func _on_farm_action_requested(id: int, plot_id: int, action: String) -> void:
@@ -240,9 +263,9 @@ func _on_peer_moved(id: int, pos: Vector2, to: Vector2, is_fishing: bool, farm: 
 func _update_remote_visibility() -> void:
 	var mine := my_farm()
 	for r in remotes.values():
-		r.visible = r.farm == mine or not FARM_RECT.has_point(r.position)
+		r.visible = r.farm == mine or not _is_private(r.position)
 		if is_instance_valid(r.lahm):
-			r.lahm.visible = r.visible and (r.farm == mine or not FARM_RECT.has_point(r.lahm.position))
+			r.lahm.visible = r.visible and (r.farm == mine or not _is_private(r.lahm.position))
 
 
 func _on_peer_chat(id: int, text: String) -> void:
@@ -287,6 +310,7 @@ func _build_props() -> void:
 	for p in [Vector2(1030, 560), Vector2(1370, 560), Vector2(1030, 890), Vector2(1370, 890)]:
 		_prop("lamp", p)
 	farm_sign = _prop("sign", Vector2(1700, 1265), "开心农场")
+	home_sign = _prop("sign", Vector2(1150, 1050), "我的小院")
 	_prop("sign", Vector2(860, 1110), "钓鱼湖")
 	_prop("sign", Vector2(960, 700), "城堡广场")
 	_prop("flowers", Vector2(500, 520))
@@ -314,11 +338,11 @@ func _build_props() -> void:
 		_prop("tree" if rng.randf() < 0.6 else "pine", Vector2(40 + rng.randf_range(-10, 10), y))
 		_prop("tree" if rng.randf() < 0.6 else "pine", Vector2(2360 + rng.randf_range(-10, 10), y))
 		y += 130.0
-	for p in [Vector2(320, 330), Vector2(250, 720), Vector2(1000, 1250), Vector2(1350, 1230),
+	for p in [Vector2(320, 330), Vector2(250, 720), Vector2(1000, 1250),
 			Vector2(2230, 760), Vector2(2200, 330), Vector2(1500, 260), Vector2(880, 260), Vector2(420, 1300)]:
 		_prop("tree", p)
 	for p in [Vector2(450, 620), Vector2(900, 380), Vector2(1550, 380), Vector2(2000, 620),
-			Vector2(1500, 800), Vector2(300, 950), Vector2(1100, 1100), Vector2(2200, 1100)]:
+			Vector2(1500, 800), Vector2(300, 950), Vector2(2200, 1100)]:
 		_prop("bush", p)
 
 
@@ -334,6 +358,13 @@ func _build_farm() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and placing != "":
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			_try_place(get_global_mouse_position())
+		else:
+			cancel_placing()
+		get_viewport().set_input_as_handled()
+		return
 	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if ui.fishing:
@@ -354,6 +385,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	rain_dim = move_toward(rain_dim, 1.0 if GameState.raining else 0.0, delta * 0.5)
 	sky.color = _sky_color(GameState.minutes / 60.0) * Color(1, 1, 1).lerp(Color(0.72, 0.76, 0.86), rain_dim)
+	if ghost != null:
+		ghost.position = get_global_mouse_position()
+		ghost.set_valid(_can_place(ghost.position))
 	_update_remote_visibility()
 
 
@@ -372,3 +406,94 @@ func _sky_color(h: float) -> Color:
 	if h < 21.0:
 		return dusk.lerp(night, (h - 19.0) / 2.0)
 	return night
+
+
+# ---------- 小院家具 ----------
+
+## 农场和小院属于“各家私有”的区域
+func _is_private(p: Vector2) -> bool:
+	return FARM_RECT.has_point(p) or GameState.HOME_RECT.has_point(p)
+
+
+func _build_home(list: Array, remote: bool) -> void:
+	for n in home_nodes:
+		n.queue_free()
+	home_nodes.clear()
+	for i in list.size():
+		var f: Dictionary = list[i]
+		var n = Furniture.new()
+		n.kind = f["id"]
+		n.index = -1 if remote else i
+		n.position = Vector2(f["x"], f["y"])
+		n.visible = not (not remote and i == moving_index)
+		ysort.add_child(n)
+		home_nodes.append(n)
+
+
+func start_placing(kind: String, from_index: int = -1) -> void:
+	cancel_placing()
+	if Net.visiting != 0:
+		GameState.toast.emit("在好友家不能摆家具哦，先回家吧")
+		return
+	placing = kind
+	moving_index = from_index
+	ghost = Furniture.new()
+	ghost.kind = kind
+	ghost.ghost = true
+	ghost.position = get_global_mouse_position()
+	ysort.add_child(ghost)
+	if from_index >= 0 and from_index < home_nodes.size():
+		home_nodes[from_index].visible = false
+	GameState.toast.emit("点击小院里的空地摆放%s，右键或 Esc 取消" % GameState.FURNITURE[kind]["name"])
+
+
+func cancel_placing() -> void:
+	if ghost != null:
+		ghost.queue_free()
+		ghost = null
+	if moving_index >= 0 and moving_index < home_nodes.size():
+		home_nodes[moving_index].visible = true
+	placing = ""
+	moving_index = -1
+
+
+func _can_place(p: Vector2) -> bool:
+	if not GameState.HOME_RECT.grow(-22).has_point(p):
+		return false
+	for i in GameState.home.size():
+		if i == moving_index:
+			continue
+		var f: Dictionary = GameState.home[i]
+		if p.distance_to(Vector2(f["x"], f["y"])) < 46.0:
+			return false
+	return true
+
+
+func _try_place(p: Vector2) -> void:
+	if not _can_place(p):
+		GameState.toast.emit("这里放不下，要放在小院里的空地上")
+		return
+	if moving_index >= 0:
+		GameState.home[moving_index]["x"] = p.x
+		GameState.home[moving_index]["y"] = p.y
+	else:
+		if not GameState.remove_item("furn_" + placing):
+			cancel_placing()
+			return
+		GameState.home.append({"id": placing, "x": p.x, "y": p.y})
+	Sfx.play("plant")
+	fx.pop(p)
+	cancel_placing()
+	_build_home(GameState.home, false)
+	if not Net.visitors.is_empty():
+		Net.push_farm(_farm_states())
+
+
+func store_furniture(i: int) -> void:
+	if i < 0 or i >= GameState.home.size():
+		return
+	var f: Dictionary = GameState.home[i]
+	GameState.home.remove_at(i)
+	GameState.add_item("furn_" + str(f["id"]))
+	GameState.toast.emit("%s 收进背包了" % GameState.FURNITURE[f["id"]]["name"])
+	_build_home(GameState.home, false)

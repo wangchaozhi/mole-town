@@ -472,7 +472,7 @@ func _build_shop() -> void:
 	title.add_child(_button("关闭", func(): shop_panel.visible = false))
 	v.add_child(title)
 	var tabs := HBoxContainer.new()
-	for tab in [["买种子", "seeds"], ["卖东西", "sell"], ["帽子", "hats"], ["拉姆用品", "lahm"]]:
+	for tab in [["买种子", "seeds"], ["卖东西", "sell"], ["帽子", "hats"], ["家具", "furniture"], ["拉姆用品", "lahm"]]:
 		tabs.add_child(_button(tab[0], _shop_tab.bind(tab[1])))
 	v.add_child(tabs)
 	var scroll := ScrollContainer.new()
@@ -607,7 +607,14 @@ func _refresh_bag() -> void:
 	if GameState.inventory.is_empty():
 		bag_list.add_child(_label("背包空空的……", 16))
 	for id in GameState.inventory:
-		bag_list.add_child(_label("%s ×%d" % [GameState.item_name(id), GameState.count(id)], 17))
+		var l := _label("%s ×%d" % [GameState.item_name(id), GameState.count(id)], 17)
+		if str(id).begins_with("furn_"):
+			var hb := HBoxContainer.new()
+			hb.add_child(l)
+			hb.add_child(_button("摆放", _place_from_bag.bind(str(id).substr(5))))
+			bag_list.add_child(hb)
+		else:
+			bag_list.add_child(l)
 
 
 func show_toast(text: String) -> void:
@@ -665,6 +672,9 @@ func close_popups() -> void:
 
 func _close_all() -> void:
 	close_popups()
+	var main = get_tree().current_scene
+	if main != null and main.has_method("cancel_placing"):
+		main.cancel_placing()
 	help_panel.visible = false
 	net_panel.visible = false
 	settings_panel.visible = false
@@ -873,6 +883,8 @@ func _populate_shop() -> void:
 					_shop_row(label, [["Lv%d 解锁" % int(h.get("level", 1)), _noop, true]])
 				else:
 					_shop_row(label, [["购买并穿戴", _wear.bind(id)]])
+		"furniture":
+			_furniture_rows()
 		"lahm":
 			var fp := GameState.LAHM_FRUIT_PRICE
 			_shop_row("拉姆果   %d豆\n拉姆最爱吃的果子，恢复40点饱食度（你有 %d 个）" % [fp, GameState.count("lahm_fruit")],
@@ -1443,3 +1455,31 @@ func _do_signin() -> void:
 		if player != null:
 			player.play_emote("happy")
 	_refresh_signin()
+
+
+# ---------- 小院家具 ----------
+
+func _place_from_bag(kind: String) -> void:
+	bag_panel.visible = false
+	get_tree().current_scene.start_placing(kind)
+
+
+func on_furniture_interact(node) -> void:
+	var name_: String = GameState.FURNITURE[node.kind]["name"]
+	show_dialog(name_, "要怎么摆弄这件%s呢？" % name_, [
+		["移动", get_tree().current_scene.start_placing.bind(node.kind, node.index)],
+		["收进背包", get_tree().current_scene.store_furniture.bind(node.index)],
+		["就这样吧", _noop],
+	])
+
+
+func _furniture_rows() -> void:
+	shop_list.add_child(_label("买好的家具在背包里点「摆放」，放到农场旁边的「我的小院」里。好友串门时能看到哦！", 15))
+	for id in GameState.FURNITURE:
+		var f: Dictionary = GameState.FURNITURE[id]
+		var have := GameState.count("furn_" + id)
+		var info := "%s   %d豆%s" % [f["name"], f["price"], "（背包里有 %d 个）" % have if have > 0 else ""]
+		if GameState.player_level >= int(f["level"]):
+			_shop_row(info, [["购买", _buy.bind("furn_" + id, int(f["price"]), 1)]])
+		else:
+			_shop_row(info, [["Lv%d 解锁" % int(f["level"]), _noop, true]])

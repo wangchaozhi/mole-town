@@ -41,6 +41,20 @@ const HATS := {
 
 const LAHM_FRUIT_PRICE := 15
 
+const FURNITURE := {
+	"pot": {"name": "小花盆", "price": 30, "level": 1},
+	"mailbox": {"name": "邮筒", "price": 40, "level": 1},
+	"table": {"name": "下午茶桌", "price": 60, "level": 1},
+	"bench": {"name": "长椅", "price": 70, "level": 2},
+	"lantern": {"name": "小灯笼", "price": 80, "level": 2},
+	"scarecrow": {"name": "稻草人", "price": 100, "level": 3},
+	"campfire": {"name": "篝火", "price": 120, "level": 4},
+	"swing": {"name": "秋千", "price": 160, "level": 5},
+	"lahm_house": {"name": "拉姆小屋", "price": 220, "level": 6},
+	"windmill": {"name": "风车", "price": 320, "level": 8},
+}
+const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围
+
 var beans: int = 100
 var inventory: Dictionary = {}
 var selected_seed: String = "carrot"
@@ -56,6 +70,7 @@ var minutes: float = 480.0
 var quest: Dictionary = {}
 var quests_done: int = 0
 var plots: Dictionary = {}
+var home: Array = []  # 小院里摆放的家具 [{"id", "x", "y"}]
 var offline_seconds: float = 0.0
 var font: Font
 var ui_theme: Theme
@@ -128,6 +143,8 @@ func item_name(id: String) -> String:
 		return FISH[id]["name"]
 	if id == "lahm_fruit":
 		return "拉姆果"
+	if id.begins_with("furn_") and FURNITURE.has(id.substr(5)):
+		return FURNITURE[id.substr(5)]["name"]
 	return id
 
 
@@ -238,7 +255,7 @@ func save_game() -> void:
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
-		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
+		"plots": plots, "home": home, "saved_at": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f:
@@ -286,6 +303,10 @@ func load_game() -> bool:
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
+	home = []
+	for fe in data.get("home", []):
+		if typeof(fe) == TYPE_DICTIONARY and FURNITURE.has(str(fe.get("id", ""))):
+			home.append({"id": str(fe["id"]), "x": float(fe.get("x", 0)), "y": float(fe.get("y", 0))})
 	player_name = str(data.get("player_name", "")).left(10)
 	body_color = str(data.get("body_color", ""))
 	var now := Time.get_unix_time_from_system()
@@ -405,6 +426,7 @@ func reset_game() -> void:
 	quests_done = 0
 	plots = {}
 	help_today = 0
+	home = []
 	offline_seconds = 0.0
 	collection = {}
 	stats = {}

@@ -38,6 +38,16 @@ func _draw() -> void:
 		draw_circle(f[0], 3.0, f[1])
 		draw_circle(f[0], 1.2, Color(1, 0.9, 0.3))
 
+	# 小院：浅色草坪 + 石板小路
+	var yard := Rect2(1110, 1060, 360, 260)
+	draw_rect(yard.grow(6), Color(0.38, 0.62, 0.3))
+	draw_rect(yard, Color(0.56, 0.82, 0.42))
+	for yy in range(0, 260, 40):
+		for xx in range(0, 360, 40):
+			if (xx + yy) / 40 % 2 == 0:
+				draw_rect(Rect2(1110 + xx, 1060 + yy, 40, 40), Color(0.6, 0.85, 0.46))
+	for i in 6:
+		D_ell(Vector2(1290, 1080 + i * 44), Vector2(16, 9), Color(0.82, 0.8, 0.75))
 	draw_rect(Rect2(1590, 870, 520, 325), Color(0.6, 0.46, 0.3))
 	draw_rect(Rect2(1590, 870, 520, 325), Color(0.5, 0.38, 0.24), false, 4.0)
 
@@ -59,3 +69,11 @@ func _draw() -> void:
 	for i in 24:
 		var a := TAU * i / 24.0
 		draw_line(PLAZA + Vector2(cos(a), sin(a)) * 70.0, PLAZA + Vector2(cos(a), sin(a)) * 205.0, Color(0.82, 0.78, 0.72), 2.0)
+
+
+func D_ell(c: Vector2, r: Vector2, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		pts.append(c + Vector2(cos(a) * r.x, sin(a) * r.y))
+	draw_colored_polygon(pts, col)
