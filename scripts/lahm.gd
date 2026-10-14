@@ -33,7 +33,7 @@ func _ready() -> void:
 		add_to_group("my_lahm")
 	name_label = Label.new()
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.position = Vector2(-50, 4)
+	name_label.position = Vector2(-50, -84)  # 名字放在头顶，避免和主人的名字 / 称号挤在一起
 	name_label.size = Vector2(100, 20)
 	name_label.add_theme_font_size_override("font_size", 13)
 	name_label.add_theme_color_override("font_color", Color(1, 0.85, 0.9))
