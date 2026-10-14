@@ -227,6 +227,27 @@ func _run() -> void:
 	check(not lele.sleeping, "早上乐乐醒来")
 	GameState.minutes = minutes0
 
+	print("[界面]")
+	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
+	ui.open_shop()
+	for t in ["seeds", "sell", "hats", "furniture", "lahm"]:
+		ui.shop.set_tab(t)
+	check(ui.shop.is_open() and ui.shop.list.get_child_count() > 0, "商店各分页")
+	ui._close_all()
+	ui.toggle_collection()
+	ui.show_signin_if_needed()
+	ui.toggle_bag()
+	ui.toggle_settings()
+	ui.toggle_net()
+	ui.toggle_emotes()
+	ui.open_minigame_intro()
+	ui.open_creator()
+	ui.help_panel.visible = true
+	await _frames(2)
+	ui._close_all()
+	ui.creator_panel.visible = false
+	check(not ui.help_panel.visible and not ui.bag_panel.visible, "所有面板都能打开和关闭")
+
 	print("[存档]")
 	GameState.save_game()
 	var snapshot := {"beans": GameState.beans, "level": GameState.player_level, "hat": GameState.hat, "name": GameState.player_name}
