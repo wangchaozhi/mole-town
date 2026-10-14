@@ -148,6 +148,7 @@ func get_interact_point() -> Vector2:
 
 
 func interact(_pl) -> void:
+	GameState.tutorial_event("lahm")
 	if GameState.lahm_hunger >= 90.0:
 		_pet()
 		return

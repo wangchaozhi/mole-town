@@ -58,6 +58,13 @@ func _run() -> void:
 	ui._close_all()
 	check(GameState.player_name == "测试员", "名字已保存")
 	check(p.display_name == "测试员", "玩家头顶名字更新")
+	check(GameState.tutorial_active() and ui.tut_box.visible, "新玩家有新手引导")
+	GameState.tutorial_event("water")
+	check(GameState.tutorial_step == 0, "不是当前步骤的事件不推进引导")
+	GameState.tutorial_event("plant")
+	check(GameState.tutorial_step == 1, "完成当前步骤推进引导")
+	GameState.skip_tutorial()
+	check(not GameState.tutorial_active() and not ui.tut_box.visible, "跳过新手引导")
 
 	print("[农场]")
 	var plot = main.plots[0]

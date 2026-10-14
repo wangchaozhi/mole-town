@@ -141,6 +141,8 @@ func buy(id: String, price: int, n: int) -> void:
 	if GameState.spend_beans(price * n):
 		GameState.add_item(id, n)
 		ui.show_toast("买到了 %s ×%d" % [GameState.item_name(id), n])
+		if id.begins_with("seed_"):
+			GameState.tutorial_event("buy_seed")
 	else:
 		ui.show_toast("摩尔豆不够啦！")
 	populate()

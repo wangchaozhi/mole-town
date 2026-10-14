@@ -103,6 +103,7 @@ func interact(_pl) -> void:
 			picked = false
 			Sfx.play("plant")
 			GameState.add_exp(1)
+			GameState.tutorial_event("plant")
 			GameState.toast.emit("种下了%s，记得浇水哦" % GameState.item_name("seed_" + seed))
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
@@ -121,6 +122,7 @@ func interact(_pl) -> void:
 	elif water_time <= 0.0:
 		water_time = 20.0
 		Sfx.play("water")
+		GameState.tutorial_event("water")
 		GameState.toast.emit("浇水完成，接下来 20 秒生长速度翻倍！")
 	else:
 		GameState.toast.emit("%s 正在生长中…… %d%%" % [GameState.item_name(crop), int(growth * 100)])

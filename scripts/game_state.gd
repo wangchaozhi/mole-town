@@ -108,6 +108,7 @@ func _ready() -> void:
 			save_path = "user://mole_save_%s.json" % a.substr(10).validate_filename()
 	if not load_game():
 		is_new_player = true
+		tutorial_step = 0
 		inventory = {"seed_carrot": 5, "lahm_fruit": 2}
 		new_quest()
 	if player_name == "":
@@ -265,7 +266,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -301,6 +302,7 @@ func load_game() -> bool:
 	quest = data.get("quest", {})
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
+	tutorial_step = int(data.get("tutorial_step", -1))
 	best_catch = int(data.get("best_catch", 0))
 	contest_day = int(data.get("contest_day", -1))
 	contest_count = int(data.get("contest_count", 0))
@@ -465,6 +467,7 @@ func reset_game() -> void:
 	npc_gift_day = {}
 	stats = {}
 	board = []
+	tutorial_step = 0
 	achievements = []
 	raining = false
 	weather_timer = 60.0
@@ -975,3 +978,43 @@ func sleep_until_morning() -> float:
 
 func can_sleep() -> bool:
 	return minutes >= 20.0 * 60.0 or minutes < 6.0 * 60.0
+
+
+# ---------- 新手引导 ----------
+
+const TUTORIAL := [
+	{"text": "点击农场（右下）里的空地，种下一颗萝卜", "event": "plant", "target": "farm"},
+	{"text": "再点一下刚种下的萝卜，给它浇水", "event": "water", "target": "farm"},
+	{"text": "去钓鱼湖（左下）点击湖面，钓一条鱼", "event": "fish", "target": "pond"},
+	{"text": "去摩尔百货找店长豆豆，买一颗种子", "event": "buy_seed", "target": "shop"},
+	{"text": "去广场找乐乐聊聊，她会给你任务", "event": "talk_lele", "target": "lele"},
+	{"text": "点击你的拉姆，喂喂它或者摸摸它", "event": "lahm", "target": "lahm"},
+]
+
+signal tutorial_changed
+
+var tutorial_step := -1  # -1 = 已完成或跳过
+
+
+func tutorial_active() -> bool:
+	return tutorial_step >= 0 and tutorial_step < TUTORIAL.size()
+
+
+func tutorial_event(ev: String) -> void:
+	if not tutorial_active() or TUTORIAL[tutorial_step]["event"] != ev:
+		return
+	tutorial_step += 1
+	add_beans(10)
+	if tutorial_step >= TUTORIAL.size():
+		tutorial_step = -1
+		add_beans(100)
+		add_item("lahm_fruit", 3)
+		toast.emit("新手引导完成！奖励 100 摩尔豆和 3 个拉姆果，接下来自由探索吧~")
+	else:
+		toast.emit("做得好！+10 摩尔豆  下一步：" + str(TUTORIAL[tutorial_step]["text"]))
+	tutorial_changed.emit()
+
+
+func skip_tutorial() -> void:
+	tutorial_step = -1
+	tutorial_changed.emit()

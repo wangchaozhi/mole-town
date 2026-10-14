@@ -25,6 +25,8 @@ var quest_label: Label
 var hunger_bar: ProgressBar
 var lahm_info: Label
 var fest_label: Label
+var tut_box: HBoxContainer
+var tut_label: Label
 var level_label: Label
 var exp_bar: ProgressBar
 var seed_buttons := {}
@@ -216,6 +218,19 @@ func _build_hud() -> void:
 	fest_label.custom_minimum_size = Vector2(260, 0)
 	fest_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	v.add_child(fest_label)
+	tut_box = HBoxContainer.new()
+	tut_label = _label("", 14)
+	tut_label.add_theme_color_override("font_color", Color(0.85, 0.45, 0.05))
+	tut_label.custom_minimum_size = Vector2(210, 0)
+	tut_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	tut_box.add_child(tut_label)
+	var skip := _button("跳过", GameState.skip_tutorial)
+	skip.add_theme_font_size_override("font_size", 13)
+	skip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tut_box.add_child(skip)
+	v.add_child(tut_box)
+	GameState.tutorial_changed.connect(_refresh_tutorial)
+	_refresh_tutorial()
 	online_label = _label("", 14)
 	online_label.add_theme_color_override("font_color", Color(0.15, 0.5, 0.8))
 	v.add_child(online_label)
@@ -521,7 +536,8 @@ func _build_help() -> void:
 	var l := _label("", 16)
 	l.custom_minimum_size = Vector2(600, 0)
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
-	l.text = "• 鼠标左键点击地面走路，点击人物 / 物体互动；也可以用 WASD / 方向键走路，按 F 和身边的东西互动\n" \
+	l.text = "• 新玩家会有一段新手引导：跟着左上角的提示和地图上的橙色箭头走，每完成一步都有奖励（可以跳过）\n" \
+		+ "• 鼠标左键点击地面走路，点击人物 / 物体互动；也可以用 WASD / 方向键走路，按 F 和身边的东西互动\n" \
 		+ "• 开心农场（右下）：在右下角的种子栏选好种子，点空地播种（新作物随等级解锁）；点作物浇水（生长加速）；成熟后点击收获；有虫子时点击抓虫\n" \
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
@@ -793,6 +809,7 @@ func _npc_title(npc) -> String:
 
 
 func _lele_dialog(npc) -> void:
+	GameState.tutorial_event("talk_lele")
 	if GameState.quest_done():
 		show_dialog(_npc_title(npc), "哇，你完成了任务！真是能干的小摩尔~ 这是给你的奖励！",
 			[["领取奖励", _claim_quest.bind(npc)]])
@@ -883,6 +900,7 @@ func _reel() -> void:
 			var id := _roll_fish()
 			GameState.add_item(id)
 			GameState.record("fish", id)
+			GameState.tutorial_event("fish")
 			if id != "boot":
 				GameState.contest_catch()
 			if id == "boot":
@@ -1020,3 +1038,9 @@ func do_emote(kind: String) -> void:
 
 func open_kitchen() -> void:
 	kitchen.open()
+
+
+func _refresh_tutorial() -> void:
+	tut_box.visible = GameState.tutorial_active()
+	if tut_box.visible:
+		tut_label.text = "新手引导（%d/%d）：%s" % [GameState.tutorial_step + 1, GameState.TUTORIAL.size(), GameState.TUTORIAL[GameState.tutorial_step]["text"]]
