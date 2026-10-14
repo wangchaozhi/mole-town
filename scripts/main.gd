@@ -16,6 +16,11 @@ const Gate = preload("res://scripts/gate.gd")
 const Board = preload("res://scripts/board.gd")
 const FestivalDeco = preload("res://scripts/festival_deco.gd")
 const Stove = preload("res://scripts/stove.gd")
+const Interior = preload("res://scripts/interior.gd")
+const Spot = preload("res://scripts/spot.gd")
+const COTTAGE_POS := Vector2(1010, 1175)
+const INTERIOR_WALK := Rect2(3030, 320, 420, 185)
+const WORLD_WALK := Rect2(40, 150, 2320, 1210)
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
@@ -29,6 +34,7 @@ var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
 var cam: Camera2D
 var zoom_level := 1.0
+var inside := false  # 是否在自己的小屋里
 var rain_dim := 0.0
 var farm_sign
 var home_sign
@@ -182,6 +188,8 @@ func _on_visit_changed() -> void:
 		home_sign.text = "%s的小院" % Net.player_name(Net.visiting)
 		cancel_placing()
 		_build_home([], true)
+		if inside:
+			exit_home()
 		player.position = Vector2(1845, 1240)
 		player.target = player.position
 		player.moving = false
@@ -318,6 +326,7 @@ func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, 
 func _build_props() -> void:
 	_prop("castle", Vector2(1200, 330))
 	add_child(FestivalDeco.new())
+	_build_cottage()
 	var stove = Stove.new()
 	stove.position = Vector2(870, 800)
 	ysort.add_child(stove)
@@ -361,7 +370,7 @@ func _build_props() -> void:
 		_prop("tree" if rng.randf() < 0.6 else "pine", Vector2(40 + rng.randf_range(-10, 10), y))
 		_prop("tree" if rng.randf() < 0.6 else "pine", Vector2(2360 + rng.randf_range(-10, 10), y))
 		y += 130.0
-	for p in [Vector2(320, 330), Vector2(250, 720), Vector2(1000, 1250),
+	for p in [Vector2(320, 330), Vector2(250, 720),
 			Vector2(2230, 760), Vector2(2200, 330), Vector2(1500, 260), Vector2(880, 260), Vector2(420, 1300)]:
 		_prop("tree", p)
 	for p in [Vector2(450, 620), Vector2(900, 380), Vector2(1550, 380), Vector2(2000, 620),
@@ -439,7 +448,7 @@ func _sky_color(h: float) -> Color:
 
 ## 农场和小院属于“各家私有”的区域
 func _is_private(p: Vector2) -> bool:
-	return FARM_RECT.has_point(p) or GameState.HOME_RECT.has_point(p)
+	return FARM_RECT.has_point(p) or GameState.HOME_RECT.has_point(p) or Interior.ROOM.has_point(p)
 
 
 func _build_home(list: Array, remote: bool) -> void:
@@ -531,6 +540,8 @@ func store_furniture(i: int) -> void:
 func teleport(p: Vector2) -> void:
 	if ui.fishing:
 		return
+	if inside:
+		exit_home()
 	cancel_placing()
 	p.x = clampf(p.x, player.world_rect.position.x, player.world_rect.end.x)
 	p.y = clampf(p.y, player.world_rect.position.y, player.world_rect.end.y)
@@ -594,3 +605,126 @@ func _handle_zoom(event: InputEvent) -> bool:
 			set_zoom(zoom_level / 1.15)
 			return true
 	return false
+
+
+# ---------- 我的小屋 ----------
+
+func _build_cottage() -> void:
+	_prop("cottage", COTTAGE_POS, "我的小屋")
+	_spot("home_door", COTTAGE_POS)
+	add_child(Interior.new())
+	var room := Interior.ROOM
+	_spot("exit_door", Vector2(room.get_center().x, room.end.y - 4))
+	_spot("bed", Vector2(room.position.x + 75, room.position.y + 170))
+	_spot("wardrobe", Vector2(room.end.x - 40, room.position.y + 135))
+	_spot("shelf", Vector2(room.end.x - 120, room.position.y + 100))
+
+
+func _spot(kind: String, pos: Vector2) -> void:
+	var s = Spot.new()
+	s.kind = kind
+	s.position = pos
+	s.add_to_group("home_spots")
+	ysort.add_child(s)
+
+
+func map_position() -> Vector2:
+	return COTTAGE_POS if inside else player.position
+
+
+func enter_home() -> void:
+	if inside:
+		return
+	cancel_placing()
+	ui.close_popups()
+	inside = true
+	player.world_rect = INTERIOR_WALK
+	_move_player(Vector2(Interior.ROOM.get_center().x, INTERIOR_WALK.end.y - 6))
+	var v := Interior.VIEW
+	cam.limit_left = int(v.position.x)
+	cam.limit_top = int(v.position.y)
+	cam.limit_right = int(v.end.x)
+	cam.limit_bottom = int(v.end.y)
+	cam.reset_smoothing()
+	get_tree().call_group("home_spots", "queue_redraw")
+	Sfx.play("door")
+
+
+func exit_home() -> void:
+	if not inside:
+		return
+	inside = false
+	player.world_rect = WORLD_WALK
+	_move_player(COTTAGE_POS + Vector2(0, 40))
+	cam.limit_left = 0
+	cam.limit_top = 0
+	cam.limit_right = 2400
+	cam.limit_bottom = 1400
+	cam.reset_smoothing()
+	Sfx.play("door")
+
+
+func _move_player(p: Vector2) -> void:
+	player.position = p
+	player.target = p
+	player.moving = false
+	player.pending = null
+	var lahm = get_tree().get_first_node_in_group("my_lahm")
+	if lahm != null:
+		lahm.position = p + Vector2(-50, 4)
+
+
+func home_action(kind: String) -> void:
+	match kind:
+		"home_door":
+			enter_home()
+		"exit_door":
+			exit_home()
+		"bed":
+			if GameState.can_sleep():
+				_sleep()
+			else:
+				GameState.toast.emit("现在还不困，晚上 8 点以后再来睡吧")
+		"wardrobe":
+			var opts: Array = []
+			for h in GameState.owned_hats:
+				opts.append([GameState.HATS[h]["name"], _wear_hat.bind(h)])
+			opts.append(["关上衣柜", ui._noop])
+			ui.show_dialog("衣柜", "今天戴哪顶帽子？（新帽子可以在摩尔百货买）", opts)
+		"shelf":
+			var st: Dictionary = GameState.stats
+			ui.show_dialog("奖杯架", "成就 %d / %d　等级 Lv%d\n累计收获 %d 个作物 · 钓到 %d 条鱼 · 做了 %d 道菜 · 接果子最高 %d 分" % [
+				GameState.achievements.size(), GameState.ACHIEVEMENTS.size(), GameState.player_level,
+				int(st.get("harvest_total", 0)), int(st.get("fish_total", 0)), int(st.get("cook_total", 0)), GameState.best_catch],
+				[["看看图鉴", ui.toggle_collection], ["好的", ui._noop]])
+
+
+func _wear_hat(h: String) -> void:
+	GameState.hat = h
+	GameState.hat_changed.emit()
+	player.play_emote("happy")
+	Sfx.play("pop")
+
+
+## 上床睡觉：屏幕渐黑，跳到第二天早上 6 点，期间作物继续生长
+func _sleep() -> void:
+	GameState.input_locked = true
+	var fade := ColorRect.new()
+	fade.color = Color(0, 0, 0, 0)
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui.root.add_child(fade)
+	var tw := create_tween()
+	tw.tween_property(fade, "color:a", 1.0, 0.6)
+	tw.tween_callback(func():
+		var sec := GameState.sleep_until_morning()
+		for p in plots:
+			p._advance(sec)
+		player.play_emote("sleep"))
+	tw.tween_interval(0.5)
+	tw.tween_property(fade, "color:a", 0.0, 0.6)
+	tw.tween_callback(func():
+		fade.queue_free()
+		GameState.input_locked = false
+		GameState.toast.emit("睡了个好觉！现在是早上 6 点")
+		Sfx.play("happy"))

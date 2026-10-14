@@ -16,10 +16,10 @@ func _ready() -> void:
 	variant = randi() % 3
 	if kind in ["tree", "pine", "bush"]:
 		GameState.season_changed.connect(queue_redraw)
-	set_process(kind in ["fountain", "castle", "lamp", "house", "shop"])
+	set_process(kind in ["fountain", "castle", "lamp", "house", "shop", "cottage"])
 	if kind == "lamp":
 		light = _make_light(Vector2(0, -105), 1.6, Color(1, 0.85, 0.55))
-	elif kind == "house" or kind == "shop":
+	elif kind == "house" or kind == "shop" or kind == "cottage":
 		light = _make_light(Vector2(0, -70), 2.2, Color(1, 0.8, 0.5))
 
 
@@ -69,6 +69,10 @@ func _draw() -> void:
 		"vfence": _vfence()
 		"house": _building(Color(1.0, 0.93, 0.8), Color(0.95, 0.45, 0.55))
 		"shop": _building(Color(0.85, 0.93, 1.0), Color(0.3, 0.6, 0.85))
+		"cottage":
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2(0.68, 0.68))
+			_building(Color(0.98, 0.9, 0.7), Color(0.55, 0.75, 0.4))
+			draw_set_transform(Vector2.ZERO)
 		"fountain": _fountain()
 		"castle": _castle()
 

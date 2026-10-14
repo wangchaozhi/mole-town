@@ -23,7 +23,9 @@ func _new_drop(anywhere: bool) -> Array:
 
 
 func _process(delta: float) -> void:
-	amount = move_toward(amount, 1.0 if GameState.raining else 0.0, delta * 0.5)
+	var cs = get_tree().current_scene
+	var indoors: bool = cs != null and cs.get("inside") == true
+	amount = move_toward(amount, 1.0 if GameState.raining and not indoors else 0.0, delta * (3.0 if indoors else 0.5))
 	if amount <= 0.0:
 		if canvas.visible:
 			canvas.visible = false

@@ -58,9 +58,9 @@ func _draw() -> void:
 			if r.visible:
 				draw_circle(_m(r.position), 3.5, Color(0.25, 0.55, 1.0))
 		var lahm = get_tree().get_first_node_in_group("my_lahm")
-		if lahm != null:
+		if lahm != null and not main.inside:
 			draw_circle(_m(lahm.position), 2.5, Color(1, 0.6, 0.75))
-		var pp: Vector2 = _m(main.player.position)
+		var pp: Vector2 = _m(main.map_position())
 		draw_circle(pp, 5.0, Color.WHITE)
 		draw_circle(pp, 3.8, Color(0.9, 0.1, 0.15))
 	draw_rect(Rect2(Vector2.ZERO, s), Color(0.45, 0.3, 0.15), false, 2.0)

@@ -238,6 +238,21 @@ func _run() -> void:
 	check(ui.kitchen.panel.visible and ui.kitchen.list.get_child_count() > 0, "打开小厨房")
 	ui._close_all()
 
+	print("[我的小屋]")
+	main.home_action("home_door")
+	check(main.inside and main.INTERIOR_WALK.has_point(p.position), "进入小屋")
+	main.home_action("bed")
+	GameState.minutes = 12.0 * 60.0
+	main.home_action("bed")
+	check(not GameState.input_locked and GameState.minutes < 12.5 * 60.0, "白天不能睡觉")
+	var day_before := GameState.day
+	GameState.minutes = 23.0 * 60.0
+	main.home_action("bed")
+	await get_tree().create_timer(2.5).timeout
+	check(GameState.day == day_before + 1 and GameState.minutes < 6.5 * 60.0 and not GameState.input_locked, "晚上睡觉直接到第二天早上")
+	main.home_action("exit_door")
+	check(not main.inside and not main.INTERIOR_WALK.has_point(p.position), "走出小屋")
+
 	print("[界面]")
 	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
 	ui.open_shop()

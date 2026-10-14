@@ -125,16 +125,7 @@ func _process(delta: float) -> void:
 	minutes += delta * DAY_MINUTES / REAL_SECONDS_PER_DAY
 	if minutes >= DAY_MINUTES:
 		minutes -= DAY_MINUTES
-		var old_season := season()
-		help_today = 0
-		day += 1
-		if season() != old_season:
-			season_changed.emit()
-			toast.emit(["春天来了，萝卜和草莓长得最快！", "夏天到了，玉米、向日葵和西瓜长得最快！", "秋天来了，南瓜和萝卜长得最快！", "冬天到了，下雪啦，作物长得慢一些~"][season()])
-		var m := market()
-		toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
-		if festival() != "":
-			toast.emit(festival_text() + "！")
+		_start_new_day()
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * (0.2 if lahm_level >= 2 else 0.25))
 	_update_weather(delta)
 
@@ -953,3 +944,34 @@ func cook(dish: String) -> bool:
 	record("cook", dish)
 	add_exp(int(DISHES[dish]["exp"]))
 	return true
+
+
+func _start_new_day() -> void:
+	var old_season := season()
+	help_today = 0
+	day += 1
+	if season() != old_season:
+		season_changed.emit()
+		toast.emit(["春天来了，萝卜和草莓长得最快！", "夏天到了，玉米、向日葵和西瓜长得最快！", "秋天来了，南瓜和萝卜长得最快！", "冬天到了，下雪啦，作物长得慢一些~"][season()])
+	var m := market()
+	toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
+	if festival() != "":
+		toast.emit(festival_text() + "！")
+
+
+## 晚上（20 点以后或 6 点以前）在床上睡觉，直接到第二天早上 6 点。返回跳过的现实秒数（用来让作物继续生长）
+func sleep_until_morning() -> float:
+	var target := 6.0 * 60.0
+	var skipped := 0.0
+	if minutes >= 20.0 * 60.0:
+		skipped = DAY_MINUTES - minutes + target
+		minutes = target
+		_start_new_day()
+	elif minutes < target:
+		skipped = target - minutes
+		minutes = target
+	return skipped * REAL_SECONDS_PER_DAY / DAY_MINUTES
+
+
+func can_sleep() -> bool:
+	return minutes >= 20.0 * 60.0 or minutes < 6.0 * 60.0
