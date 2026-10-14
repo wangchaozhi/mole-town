@@ -35,10 +35,7 @@ var dialog_panel: PanelContainer
 var dialog_name: Label
 var dialog_text: Label
 var dialog_opts: HBoxContainer
-var shop_panel: PanelContainer
-var shop_list: VBoxContainer
-var shop_beans: Label
-var shop_tab := "seeds"
+var shop  # ui_shop.gd：摩尔百货
 var bag_panel: PanelContainer
 var bag_list: GridContainer
 var help_panel: PanelContainer
@@ -104,7 +101,10 @@ func _ready() -> void:
 	_build_seed_bar()
 	_build_chat()
 	_build_dialog()
-	_build_shop()
+	shop = preload("res://scripts/ui_shop.gd").new()
+	shop.ui = self
+	add_child(shop)
+	shop.build()
 	_build_bag()
 	_build_fish()
 	_build_net()
@@ -482,35 +482,6 @@ func _build_dialog() -> void:
 	dialog_panel.visible = false
 
 
-func _build_shop() -> void:
-	shop_panel = _panel()
-	_centered(shop_panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 8)
-	shop_panel.add_child(v)
-	var title := HBoxContainer.new()
-	var tl := _label("摩尔百货", 24)
-	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_child(tl)
-	shop_beans = _label("", 17)
-	title.add_child(shop_beans)
-	title.add_child(_button("关闭", func(): shop_panel.visible = false))
-	v.add_child(title)
-	var tabs := HBoxContainer.new()
-	for tab in [["买种子", "seeds"], ["卖东西", "sell"], ["帽子", "hats"], ["家具", "furniture"], ["拉姆用品", "lahm"]]:
-		tabs.add_child(_button(tab[0], _shop_tab.bind(tab[1])))
-	v.add_child(tabs)
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(580, 330)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	shop_list = VBoxContainer.new()
-	shop_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_list.add_theme_constant_override("separation", 6)
-	scroll.add_child(shop_list)
-	v.add_child(scroll)
-	shop_panel.visible = false
-
-
 func _build_bag() -> void:
 	bag_panel = _panel()
 	_centered(bag_panel)
@@ -608,8 +579,8 @@ func _build_toast() -> void:
 func _refresh_hud() -> void:
 	beans_label.text = "摩尔豆：%d" % GameState.beans
 	quest_label.text = "任务：" + GameState.quest_text()
-	if shop_panel != null and shop_panel.visible:
-		shop_beans.text = "摩尔豆：%d  " % GameState.beans
+	if shop != null:
+		shop.refresh_beans()
 
 
 func _refresh_seeds() -> void:
@@ -698,7 +669,7 @@ func toggle_bag() -> void:
 
 func close_popups() -> void:
 	dialog_panel.visible = false
-	shop_panel.visible = false
+	shop.hide()
 	bag_panel.visible = false
 
 
@@ -806,7 +777,7 @@ func show_dialog(who: String, text: String, options: Array) -> void:
 		dialog_opts.add_child(_button(o[0], func():
 			dialog_panel.visible = false
 			cb.call()))
-	shop_panel.visible = false
+	shop.hide()
 	bag_panel.visible = false
 	dialog_panel.visible = true
 
@@ -856,119 +827,6 @@ func _reroll_quest(npc) -> void:
 		_lele_dialog(npc)
 	else:
 		show_toast("摩尔豆不够啦")
-
-
-# ---------- 商店 ----------
-
-func open_shop() -> void:
-	close_popups()
-	shop_panel.visible = true
-	_populate_shop()
-
-
-func _shop_tab(tab: String) -> void:
-	shop_tab = tab
-	_populate_shop()
-
-
-func _shop_row(text: String, buttons: Array) -> void:
-	var hb := HBoxContainer.new()
-	var l := _label(text, 16)
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hb.add_child(l)
-	for o in buttons:
-		var b := _button(o[0], o[1])
-		if o.size() > 2 and o[2]:
-			b.disabled = true
-		hb.add_child(b)
-	shop_list.add_child(hb)
-	shop_list.add_child(HSeparator.new())
-
-
-func _populate_shop() -> void:
-	for c in shop_list.get_children():
-		c.queue_free()
-	shop_beans.text = "摩尔豆：%d  " % GameState.beans
-	match shop_tab:
-		"seeds":
-			for id in GameState.CROPS:
-				var c: Dictionary = GameState.CROPS[id]
-				var price := GameState.seed_price(id)
-				var tag := "  【今日特价 6 折】" if GameState.market()["sale"] == id else ""
-				if GameState.in_season(id):
-					tag += "  【当季，长得快】"
-				var info := "%s种子   %d豆%s\n约%d秒成熟 · 今日收购价%d豆" % [c["name"], price, tag, int(c["grow_time"]), GameState.sell_price(id)]
-				if GameState.is_unlocked(id):
-					_shop_row(info, [["买1个", _buy.bind("seed_" + id, price, 1)], ["买5个", _buy.bind("seed_" + id, price, 5)]])
-				else:
-					_shop_row(info, [["Lv%d 解锁" % int(c["level"]), _noop, true]])
-		"sell":
-			var any := false
-			for id in GameState.inventory.keys():
-				var p := GameState.sell_price(id)
-				if p > 0:
-					any = true
-					var trend := ""
-					if GameState.CROPS.has(id):
-						var mlt := GameState.price_mult(id)
-						trend = "  【今日热门】" if GameState.market()["hot"] == id else ("  ↑" if mlt > 1.01 else ("  ↓" if mlt < 0.99 else ""))
-					_shop_row("%s ×%d   单价%d豆%s" % [GameState.item_name(id), GameState.count(id), p, trend],
-						[["卖1个", _sell.bind(id, 1)], ["全部卖出", _sell.bind(id, -1)]])
-			if not any:
-				shop_list.add_child(_label("没有可以卖的东西。去农场种菜或者去湖边钓鱼吧！", 16))
-		"hats":
-			for id in GameState.HATS:
-				var h: Dictionary = GameState.HATS[id]
-				var owned: bool = id in GameState.owned_hats
-				var wearing: bool = GameState.hat == id
-				var label := "%s%s" % [h["name"], "" if owned else "   %d豆" % h["price"]]
-				if wearing:
-					_shop_row(label, [["穿戴中", _noop, true]])
-				elif owned:
-					_shop_row(label, [["穿戴", _wear.bind(id)]])
-				elif not GameState.hat_unlocked(id):
-					_shop_row(label, [["Lv%d 解锁" % int(h.get("level", 1)), _noop, true]])
-				else:
-					_shop_row(label, [["购买并穿戴", _wear.bind(id)]])
-		"furniture":
-			_furniture_rows()
-		"lahm":
-			var fp := GameState.LAHM_FRUIT_PRICE
-			_shop_row("拉姆果   %d豆\n拉姆最爱吃的果子，恢复40点饱食度（你有 %d 个）" % [fp, GameState.count("lahm_fruit")],
-				[["买1个", _buy.bind("lahm_fruit", fp, 1)], ["买5个", _buy.bind("lahm_fruit", fp, 5)]])
-
-
-func _buy(id: String, price: int, n: int) -> void:
-	if GameState.spend_beans(price * n):
-		GameState.add_item(id, n)
-		show_toast("买到了 %s ×%d" % [GameState.item_name(id), n])
-	else:
-		show_toast("摩尔豆不够啦！")
-	_populate_shop()
-
-
-func _sell(id: String, n: int) -> void:
-	if n < 0:
-		n = GameState.count(id)
-	var p := GameState.sell_price(id)
-	if GameState.remove_item(id, n):
-		GameState.add_beans(p * n)
-		show_toast("卖掉 %s ×%d，获得 %d 摩尔豆" % [GameState.item_name(id), n, p * n])
-	_populate_shop()
-
-
-func _wear(id: String) -> void:
-	if not id in GameState.owned_hats:
-		var price: int = GameState.HATS[id]["price"]
-		if not GameState.spend_beans(price):
-			show_toast("摩尔豆不够啦！")
-			return
-		GameState.owned_hats.append(id)
-		GameState.check_achievements()
-		show_toast("买到了 %s！" % GameState.HATS[id]["name"])
-	GameState.hat = id
-	GameState.hat_changed.emit()
-	_populate_shop()
 
 
 # ---------- 钓鱼 ----------
@@ -1527,18 +1385,6 @@ func on_furniture_interact(node) -> void:
 	])
 
 
-func _furniture_rows() -> void:
-	shop_list.add_child(_label("买好的家具在背包里点「摆放」，放到农场旁边的「我的小院」里。好友串门时能看到哦！", 15))
-	for id in GameState.FURNITURE:
-		var f: Dictionary = GameState.FURNITURE[id]
-		var have := GameState.count("furn_" + id)
-		var info := "%s   %d豆%s" % [f["name"], f["price"], "（背包里有 %d 个）" % have if have > 0 else ""]
-		if GameState.player_level >= int(f["level"]):
-			_shop_row(info, [["购买", _buy.bind("furn_" + id, int(f["price"]), 1)]])
-		else:
-			_shop_row(info, [["Lv%d 解锁" % int(f["level"]), _noop, true]])
-
-
 # ---------- 小地图 ----------
 
 func _build_minimap() -> void:
@@ -1813,3 +1659,7 @@ func _post_board() -> void:
 	show_toast("留言已贴到留言板上")
 	if not Net.is_online() or multiplayer.is_server():
 		_refresh_board()
+
+
+func open_shop() -> void:
+	shop.open()

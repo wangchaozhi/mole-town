@@ -107,14 +107,14 @@ func _run() -> void:
 	GameState.add_beans(500)
 	b = GameState.beans
 	var sp := GameState.seed_price("strawberry")
-	ui._buy("seed_strawberry", sp, 2)
+	ui.shop.buy("seed_strawberry", sp, 2)
 	check(GameState.beans == b - sp * 2 and GameState.count("seed_strawberry") == 2, "买种子（含当日价格）")
 	GameState.add_item("pumpkin", 2)
 	b = GameState.beans
 	var price := GameState.sell_price("pumpkin")
-	ui._sell("pumpkin", -1)
+	ui.shop.sell("pumpkin", -1)
 	check(GameState.count("pumpkin") == 0 and GameState.beans == b + price * 2, "卖出作物")
-	ui._wear("red_cap")
+	ui.shop.wear("red_cap")
 	check(GameState.hat == "red_cap" and p.hat == "red_cap", "买帽子并戴上")
 
 	print("[拉姆]")
