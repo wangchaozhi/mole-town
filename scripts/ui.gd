@@ -23,6 +23,7 @@ var beans_label: Label
 var time_label: Label
 var quest_label: Label
 var hunger_bar: ProgressBar
+var lahm_info: Label
 var seed_buttons := {}
 var toast_label: Label
 var toast_timer := 0.0
@@ -184,6 +185,9 @@ func _build_hud() -> void:
 	hunger_bar.show_percentage = false
 	hunger_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hb.add_child(hunger_bar)
+	lahm_info = _label("", 13)
+	lahm_info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(lahm_info)
 	v.add_child(hb)
 	quest_label = _label("", 14)
 	quest_label.custom_minimum_size = Vector2(260, 0)
@@ -606,6 +610,8 @@ func show_toast(text: String) -> void:
 func _process(delta: float) -> void:
 	time_label.text = GameState.time_text()
 	hunger_bar.value = GameState.lahm_hunger
+	var nx := GameState.lahm_exp_to_next()
+	lahm_info.text = " Lv%d · %s" % [GameState.lahm_level, "满级" if nx < 0 else "还差%d" % nx]
 	if toast_timer > 0.0:
 		toast_timer -= delta
 		toast_label.modulate.a = clampf(toast_timer / 0.5, 0.0, 1.0)

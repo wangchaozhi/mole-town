@@ -218,6 +218,8 @@ func _on_roster_changed() -> void:
 			Sfx.play("door")
 			ui.add_chat_line("", "【系统】%s 来到了小镇" % info["name"], Color(1, 0.9, 0.4))
 		remotes[id].apply_info(info)
+		if is_instance_valid(remotes[id].lahm):
+			remotes[id].lahm.level = int(info["lahm"])
 	for id in remotes.keys():
 		if not Net.players.has(id) or id == me:
 			if Net.players.size() > 0:

@@ -44,6 +44,8 @@ var selected_seed: String = "carrot"
 var hat: String = "none"
 var owned_hats: Array = ["none"]
 var lahm_hunger: float = 80.0
+var lahm_exp: int = 0
+var lahm_level: int = 1
 var day: int = 1
 var minutes: float = 480.0
 var quest: Dictionary = {}
@@ -96,7 +98,7 @@ func _process(delta: float) -> void:
 		help_today = 0
 		day += 1
 		toast.emit("新的一天开始了！第 %d 天" % day)
-	lahm_hunger = maxf(0.0, lahm_hunger - delta * 0.25)
+	lahm_hunger = maxf(0.0, lahm_hunger - delta * (0.2 if lahm_level >= 2 else 0.25))
 	_update_weather(delta)
 
 
@@ -226,7 +228,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger,
+		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
@@ -254,6 +256,8 @@ func load_game() -> bool:
 	hat = str(data.get("hat", "none"))
 	owned_hats = data.get("owned_hats", ["none"])
 	lahm_hunger = float(data.get("lahm_hunger", 80.0))
+	lahm_exp = int(data.get("lahm_exp", 0))
+	lahm_level = clampi(int(data.get("lahm_level", 1)), 1, LAHM_LEVELS.size())
 	day = int(data.get("day", 1))
 	minutes = float(data.get("minutes", 480.0))
 	quest = data.get("quest", {})
@@ -383,6 +387,8 @@ func reset_game() -> void:
 	hat = "none"
 	owned_hats = ["none"]
 	lahm_hunger = 80.0
+	lahm_exp = 0
+	lahm_level = 1
 	day = 1
 	minutes = 480.0
 	quests_done = 0
@@ -415,6 +421,7 @@ const ACHIEVEMENTS := [
 	{"id": "visitor", "name": "串门达人", "desc": "去好友家串门 1 次", "stat": "visits", "target": 1, "reward": 30},
 	{"id": "helper", "name": "热心邻居", "desc": "去好友农场帮忙 10 次", "stat": "help_total", "target": 10, "reward": 100},
 	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 4, "reward": 200},
+	{"id": "lahm_friend", "name": "拉姆的好朋友", "desc": "把拉姆培养到 5 级", "stat": "lahm_level", "target": 5, "reward": 300},
 ]
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
@@ -445,6 +452,8 @@ func stat_value(stat: String) -> int:
 			return beans
 		"quests_done":
 			return quests_done
+		"lahm_level":
+			return lahm_level
 		"hats":
 			return owned_hats.size() - 1
 		"crop_kinds":
@@ -505,3 +514,26 @@ func sign_in() -> int:
 		add_item("seed_sunflower", 3)
 	save_game()
 	return reward
+
+
+# ---------- 拉姆成长 ----------
+
+const LAHM_LEVELS := [0, 30, 80, 160, 300]  # 升到第 N+1 级需要的累计亲密度
+const LAHM_PERKS := ["", "饿得更慢了", "会帮你抓农场里的害虫", "偶尔能找到宝物", "会帮你给缺水的作物浇水"]
+
+
+func add_lahm_exp(n: int) -> void:
+	lahm_exp += n
+	while lahm_level < LAHM_LEVELS.size() and lahm_exp >= LAHM_LEVELS[lahm_level]:
+		lahm_level += 1
+		toast.emit("拉姆升到了 %d 级！它%s" % [lahm_level, LAHM_PERKS[lahm_level - 1]])
+		Sfx.play("catch")
+		Net.send_info()
+		check_achievements()
+
+
+## 下一级还差多少亲密度；满级返回 -1
+func lahm_exp_to_next() -> int:
+	if lahm_level >= LAHM_LEVELS.size():
+		return -1
+	return LAHM_LEVELS[lahm_level] - lahm_exp
