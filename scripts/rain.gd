@@ -8,6 +8,11 @@ var canvas: Node2D
 var rainbow_t := 0.0  # 雨停后彩虹剩余显示时间
 var was_raining := false
 var rainbow: Node2D
+var air: Node2D  # 大风的飘落物和雾
+var wind_amount := 0.0
+var fog_amount := 0.0
+var wind_parts: Array = []  # [位置, 速度, 相位]
+var t_air := 0.0
 
 
 func _ready() -> void:
@@ -19,6 +24,11 @@ func _ready() -> void:
 	rainbow.draw.connect(_draw_rainbow)
 	add_child(rainbow)
 	move_child(rainbow, 0)
+	air = Node2D.new()
+	air.draw.connect(_draw_air)
+	add_child(air)
+	for i in 60:
+		wind_parts.append([Vector2(randf() * 1400.0, randf() * 760.0), randf_range(220.0, 420.0), randf() * TAU])
 	for i in 160:
 		drops.append(_new_drop(true))
 
@@ -31,6 +41,7 @@ func _new_drop(anywhere: bool) -> Array:
 
 func _process(delta: float) -> void:
 	_update_rainbow(delta)
+	_update_air(delta)
 	var cs = get_tree().current_scene
 	var indoors: bool = cs != null and cs.get("inside") == true
 	amount = move_toward(amount, 1.0 if GameState.raining and not indoors else 0.0, delta * (3.0 if indoors else 0.5))
@@ -105,3 +116,55 @@ func _draw_rainbow() -> void:
 		var col: Color = RAINBOW_COLORS[i]
 		col.a = a
 		rainbow.draw_arc(c, 230.0 - i * 7.0, PI * 1.12, PI * 1.88, 48, col, 7.0)
+
+
+# ---------- 大风 / 雾 ----------
+
+func _update_air(delta: float) -> void:
+	var cs = get_tree().current_scene
+	var indoors: bool = cs != null and cs.get("inside") == true
+	wind_amount = move_toward(wind_amount, 1.0 if GameState.sky == "wind" and not indoors else 0.0, delta * 0.6)
+	fog_amount = move_toward(fog_amount, 1.0 if GameState.sky == "fog" and not indoors else 0.0, delta * 0.3)
+	air.visible = wind_amount > 0.0 or fog_amount > 0.0
+	if not air.visible:
+		return
+	t_air += delta
+	var vs := get_viewport().get_visible_rect().size
+	for p in wind_parts:
+		p[0] += Vector2(p[1], sin(t_air * 2.0 + p[2]) * 40.0) * delta
+		if p[0].x > vs.x + 30.0:
+			p[0] = Vector2(-30.0, randf() * vs.y)
+	air.queue_redraw()
+
+
+func _draw_air() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	if fog_amount > 0.0:
+		air.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.95, 0.96, 1.0, 0.18 * fog_amount))
+		for i in 7:
+			var x := fmod(i * 230.0 + t_air * (12.0 + i * 3.0), vs.x + 400.0) - 200.0
+			var y := vs.y * (0.15 + 0.12 * i) + sin(t_air * 0.3 + i) * 20.0
+			air.draw_circle(Vector2(x, y), 160.0 + i * 12.0, Color(1, 1, 1, 0.1 * fog_amount))
+	if wind_amount > 0.0:
+		var s := GameState.season()
+		var n := int(wind_parts.size() * wind_amount)
+		for i in n:
+			var p: Vector2 = wind_parts[i][0]
+			var ph: float = wind_parts[i][2]
+			match s:
+				0:  # 樱花花瓣
+					var a := t_air * 3.0 + ph
+					air.draw_colored_polygon(PackedVector2Array([p + Vector2(cos(a), sin(a)) * 5.0, p + Vector2(-sin(a), cos(a)) * 3.0,
+						p - Vector2(cos(a), sin(a)) * 5.0, p - Vector2(-sin(a), cos(a)) * 3.0]), Color(1, 0.72, 0.82, 0.9))
+				1:  # 蒲公英
+					air.draw_circle(p, 2.0, Color(1, 1, 1, 0.9))
+					for k in 5:
+						var a := TAU * k / 5.0 + ph
+						air.draw_line(p, p + Vector2(cos(a), sin(a)) * 6.0, Color(1, 1, 1, 0.6), 1.0)
+				2:  # 落叶
+					var a := t_air * 4.0 + ph
+					var col := Color(0.9, 0.5, 0.15) if i % 2 == 0 else Color(0.8, 0.3, 0.15)
+					air.draw_colored_polygon(PackedVector2Array([p + Vector2(cos(a), sin(a)) * 7.0, p + Vector2(-sin(a), cos(a)) * 3.5,
+						p - Vector2(cos(a), sin(a)) * 7.0, p - Vector2(-sin(a), cos(a)) * 3.5]), col)
+				_:  # 风雪
+					air.draw_circle(p, 2.5, Color(1, 1, 1, 0.85))

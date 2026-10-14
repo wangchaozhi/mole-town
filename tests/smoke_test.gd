@@ -90,6 +90,11 @@ func _run() -> void:
 	await _frames(2)
 	check(plot.water_time > 0.0, "下雨自动浇水")
 	GameState.set_raining(false)
+	GameState.set_sky("wind")
+	check(GameState.sky == "wind", "大风天")
+	GameState.set_sky("fog")
+	check(GameState.sky == "fog", "起雾")
+	GameState.set_sky("")
 
 	print("[钓鱼]")
 	ui.start_fishing(main.pond.position)

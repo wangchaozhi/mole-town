@@ -467,12 +467,21 @@ func _update_weather(delta: float) -> void:
 	weather_timer -= delta
 	if weather_timer > 0.0 or not Net.controls_weather():
 		return
-	if raining:
+	if raining or sky != "":
 		set_raining(false)
+		set_sky("")
 		weather_timer = randf_range(90.0, 180.0)
-	elif randf() < 0.45:
+		return
+	var r := randf()
+	if r < 0.45:
 		set_raining(true)
 		weather_timer = randf_range(30.0, 60.0)
+	elif r < 0.6:
+		set_sky("wind")
+		weather_timer = randf_range(40.0, 80.0)
+	elif r < 0.72 and minutes < 11.0 * 60.0:
+		set_sky("fog")
+		weather_timer = randf_range(40.0, 80.0)
 	else:
 		weather_timer = 60.0
 
@@ -527,6 +536,7 @@ func reset_game() -> void:
 	achievements = []
 	raining = false
 	weather_timer = 60.0
+	sky = ""
 	new_quest()
 	beans_changed.emit()
 	inventory_changed.emit()
@@ -1300,3 +1310,22 @@ func _daily_mail() -> void:
 			gift = ["seed_" + CROPS.keys().filter(func(c): return is_unlocked(c)).pick_random(), "carrot_soup"].pick_random()
 			n = 3 if str(gift).begins_with("seed_") else 1
 		add_mail(who, MAIL_LINES[who].pick_random(), gift, n)
+
+
+# ---------- 大风 / 雾 ----------
+
+var sky := ""  # "" 普通 / "wind" 大风 / "fog" 起雾（和下雨互斥）
+
+
+func set_sky(s: String, broadcast: bool = true) -> void:
+	if s == sky:
+		return
+	sky = s
+	weather_changed.emit()
+	match s:
+		"wind":
+			toast.emit("起风啦！%s被吹得满天飞~" % ["花瓣", "蒲公英", "落叶", "雪花"][season()])
+		"fog":
+			toast.emit("清晨起雾了，小镇朦朦胧胧的")
+	if broadcast:
+		Net.send_sky(s)

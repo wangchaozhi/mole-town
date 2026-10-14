@@ -153,6 +153,7 @@ func register(info) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	players[id] = _clean(info)
 	weather.rpc_id(id, GameState.raining)
+	sky_rpc.rpc_id(id, GameState.sky)
 	clock.rpc_id(id, GameState.minutes)
 	sync_board.rpc_id(id, GameState.board)
 	_broadcast_roster()
@@ -466,3 +467,13 @@ var _clock_timer := 30.0
 @rpc("authority", "call_remote", "reliable")
 func clock(m: float) -> void:
 	GameState.minutes = clampf(m, 0.0, GameState.DAY_MINUTES - 0.01)
+
+
+func send_sky(s: String) -> void:
+	if is_online() and multiplayer.is_server():
+		sky_rpc.rpc(s)
+
+
+@rpc("authority", "call_remote", "reliable")
+func sky_rpc(s: String) -> void:
+	GameState.set_sky(s if s in ["", "wind", "fog"] else "", false)
