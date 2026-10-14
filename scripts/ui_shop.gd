@@ -135,6 +135,18 @@ func populate() -> void:
 			var fp := GameState.LAHM_FRUIT_PRICE
 			_row("拉姆果   %d豆\n拉姆最爱吃的果子，恢复40点饱食度（你有 %d 个）" % [fp, GameState.count("lahm_fruit")],
 				[["买1个", buy.bind("lahm_fruit", fp, 1)], ["买5个", buy.bind("lahm_fruit", fp, 5)]])
+			for aid in GameState.LAHM_ACCS:
+				if aid == "none":
+					continue
+				var a: Dictionary = GameState.LAHM_ACCS[aid]
+				var owned: bool = aid in GameState.owned_lahm_accs
+				var text := "拉姆的%s%s" % [a["name"], "" if owned else "   %d豆" % int(a["price"])]
+				if GameState.lahm_acc == aid:
+					_row(text, [["摘下", lahm_acc.bind("none")]])
+				elif owned:
+					_row(text, [["戴上", lahm_acc.bind(aid)]])
+				else:
+					_row(text, [["购买并戴上", lahm_acc.bind(aid)]])
 
 
 func buy(id: String, price: int, n: int) -> void:
@@ -169,4 +181,17 @@ func wear(id: String) -> void:
 		ui.show_toast("买到了 %s！" % GameState.HATS[id]["name"])
 	GameState.hat = id
 	GameState.hat_changed.emit()
+	populate()
+
+
+## 给拉姆买 / 换饰品（再点一次「佩戴中」就摘下来）
+func lahm_acc(id: String) -> void:
+	if not id in GameState.owned_lahm_accs:
+		var price: int = GameState.LAHM_ACCS[id]["price"]
+		if not GameState.spend_beans(price):
+			ui.show_toast("摩尔豆不够啦！")
+			return
+		GameState.owned_lahm_accs.append(id)
+		ui.show_toast("给拉姆买了%s！" % GameState.LAHM_ACCS[id]["name"])
+	GameState.set_lahm_acc(id)
 	populate()

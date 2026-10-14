@@ -12,6 +12,7 @@ var hearts: Array = []  # [位置, 剩余时间]
 var name_label: Label
 var is_remote := false  # 其他玩家的拉姆：只跟随、不能喂
 var level := 1  # 远程拉姆的等级由网络同步；自己的拉姆读 GameState
+var acc := "none"  # 远程拉姆的饰品；自己的拉姆读 GameState.lahm_acc
 var pet_cooldown := 0.0
 var task_plot = null  # 正在去帮忙的农田
 var task_kind := ""
@@ -235,7 +236,30 @@ func _draw() -> void:
 		var b := c + Vector2(6 * facing, -r + 2)
 		draw_colored_polygon(PackedVector2Array([b + Vector2(-8, 1), b + Vector2(8, 1), b + Vector2(9, -9),
 			b + Vector2(4, -4), b + Vector2(0, -11), b + Vector2(-4, -4), b + Vector2(-9, -9)]), Color(1, 0.82, 0.15))
+	_draw_acc(c, r, ex)
 	if hungry and fmod(t, 2.0) < 1.3:
 		D.text(self, c + Vector2(0, -48), "饿…", 16, Color(0.6, 0.2, 0.3))
 	for h in hearts:
 		D.heart(self, h[0], 6.0, Color(1, 0.3, 0.45, clampf(h[1], 0.0, 1.0)))
+
+
+func _draw_acc(c: Vector2, r: float, ex: float) -> void:
+	match acc if is_remote else GameState.lahm_acc:
+		"bow":
+			var b := c + Vector2(r * 0.55, -r * 0.75)
+			draw_colored_polygon(PackedVector2Array([b, b + Vector2(-10, -7), b + Vector2(-10, 7)]), Color(0.95, 0.25, 0.45))
+			draw_colored_polygon(PackedVector2Array([b, b + Vector2(10, -7), b + Vector2(10, 7)]), Color(0.95, 0.25, 0.45))
+			draw_circle(b, 3.0, Color(1, 0.5, 0.65))
+		"glasses":
+			var col := Color(0.2, 0.15, 0.2)
+			for sx in [-6.0, 6.0]:
+				draw_arc(c + Vector2(sx + ex, -3), 6.0, 0.0, TAU, 14, col, 1.5)
+			draw_line(c + Vector2(-1 + ex, -3), c + Vector2(1 + ex, -3), col, 1.5)
+		"scarf":
+			var s := Color(0.3, 0.55, 0.95)
+			var band := PackedVector2Array()
+			for i in 9:
+				var a := PI * 0.15 + PI * 0.7 * i / 8.0
+				band.append(c + Vector2(cos(a) * (r + 1), sin(a) * (r * 0.45) + r * 0.35))
+			draw_polyline(band, s, 6.0)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.4, r * 0.7), c + Vector2(-r * 0.1, r * 0.75), c + Vector2(-r * 0.3, r * 1.35), c + Vector2(-r * 0.6, r * 1.3)]), s.darkened(0.15))

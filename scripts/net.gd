@@ -45,7 +45,7 @@ func my_id() -> int:
 
 
 func my_info() -> Dictionary:
-	return {"name": GameState.player_name, "hat": GameState.hat, "color": GameState.body_color, "lahm": GameState.lahm_level, "level": GameState.player_level}
+	return {"name": GameState.player_name, "hat": GameState.hat, "color": GameState.body_color, "lahm": GameState.lahm_level, "level": GameState.player_level, "lacc": GameState.lahm_acc}
 
 
 func player_name(id: int) -> String:
@@ -137,6 +137,7 @@ func _clean(info) -> Dictionary:
 		"color": c if Color.html_is_valid(c) else "946644",
 		"lahm": clampi(int(info.get("lahm", 1)), 1, 5),
 		"level": clampi(int(info.get("level", 1)), 1, 10),
+		"lacc": str(info.get("lacc", "none")) if GameState.LAHM_ACCS.has(str(info.get("lacc", "none"))) else "none",
 	}
 
 

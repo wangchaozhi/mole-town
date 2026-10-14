@@ -131,6 +131,10 @@ func _run() -> void:
 	lahm.interact(p)
 	check(GameState.lahm_hunger > 30.0 and GameState.lahm_exp > exp0, "喂拉姆加饱食度和亲密度")
 
+	ui.shop.lahm_acc("bow")
+	check(GameState.lahm_acc == "bow" and "bow" in GameState.owned_lahm_accs, "给拉姆买蝴蝶结并戴上")
+	GameState.set_lahm_acc("none")
+
 	print("[任务]")
 	GameState.quest = {"kind": "harvest", "item": "carrot", "need": 1, "have": 0, "reward": 30}
 	GameState.report("harvest", "carrot")

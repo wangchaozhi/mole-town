@@ -265,7 +265,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
+		"hat": hat, "owned_hats": owned_hats, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
@@ -292,6 +292,10 @@ func load_game() -> bool:
 	selected_seed = str(data.get("selected_seed", "carrot"))
 	hat = str(data.get("hat", "none"))
 	owned_hats = data.get("owned_hats", ["none"])
+	lahm_acc = str(data.get("lahm_acc", "none"))
+	owned_lahm_accs = data.get("owned_lahm_accs", ["none"])
+	if not LAHM_ACCS.has(lahm_acc):
+		lahm_acc = "none"
 	lahm_hunger = float(data.get("lahm_hunger", 80.0))
 	lahm_exp = int(data.get("lahm_exp", 0))
 	player_exp = int(data.get("player_exp", 0))
@@ -450,6 +454,8 @@ func reset_game() -> void:
 	selected_seed = "carrot"
 	hat = "none"
 	owned_hats = ["none"]
+	lahm_acc = "none"
+	owned_lahm_accs = ["none"]
 	lahm_hunger = 80.0
 	lahm_exp = 0
 	lahm_level = 1
@@ -1018,3 +1024,24 @@ func tutorial_event(ev: String) -> void:
 func skip_tutorial() -> void:
 	tutorial_step = -1
 	tutorial_changed.emit()
+
+
+# ---------- 拉姆饰品 ----------
+
+const LAHM_ACCS := {
+	"none": {"name": "不戴饰品", "price": 0},
+	"bow": {"name": "蝴蝶结", "price": 60},
+	"glasses": {"name": "小眼镜", "price": 90},
+	"scarf": {"name": "小围巾", "price": 120},
+}
+
+signal lahm_acc_changed
+
+var lahm_acc := "none"
+var owned_lahm_accs: Array = ["none"]
+
+
+func set_lahm_acc(id: String) -> void:
+	lahm_acc = id
+	lahm_acc_changed.emit()
+	Net.send_info()

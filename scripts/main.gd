@@ -264,6 +264,7 @@ func _on_roster_changed() -> void:
 		remotes[id].apply_info(info)
 		if is_instance_valid(remotes[id].lahm):
 			remotes[id].lahm.level = int(info["lahm"])
+			remotes[id].lahm.acc = str(info["lacc"])
 	for id in remotes.keys():
 		if not Net.players.has(id) or id == me:
 			if Net.players.size() > 0:
@@ -693,6 +694,7 @@ func home_action(kind: String) -> void:
 			var opts: Array = []
 			for h in GameState.owned_hats:
 				opts.append([GameState.HATS[h]["name"], _wear_hat.bind(h)])
+			opts.append(["给拉姆换饰品", _lahm_wardrobe])
 			opts.append(["关上衣柜", ui._noop])
 			ui.show_dialog("衣柜", "今天戴哪顶帽子？（新帽子可以在摩尔百货买）", opts)
 		"shelf":
@@ -732,3 +734,11 @@ func _sleep() -> void:
 		GameState.input_locked = false
 		GameState.toast.emit("睡了个好觉！现在是早上 6 点")
 		Sfx.play("happy"))
+
+
+func _lahm_wardrobe() -> void:
+	var opts: Array = []
+	for a in GameState.owned_lahm_accs:
+		opts.append([GameState.LAHM_ACCS[a]["name"], GameState.set_lahm_acc.bind(a)])
+	opts.append(["算了", ui._noop])
+	ui.show_dialog("拉姆的饰品", "给拉姆戴什么呢？（新饰品在摩尔百货「拉姆用品」里买）", opts)
