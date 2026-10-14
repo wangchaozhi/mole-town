@@ -19,6 +19,7 @@ const Stove = preload("res://scripts/stove.gd")
 const Interior = preload("res://scripts/interior.gd")
 const Spot = preload("res://scripts/spot.gd")
 const TutorialArrow = preload("res://scripts/tutorial_arrow.gd")
+const Sprinkler = preload("res://scripts/sprinkler.gd")
 const COTTAGE_POS := Vector2(1010, 1175)
 const INTERIOR_WALK := Rect2(3030, 320, 420, 185)
 const WORLD_WALK := Rect2(40, 150, 2320, 1210)
@@ -393,6 +394,10 @@ func _build_props() -> void:
 
 
 func _build_farm() -> void:
+	var sp = Sprinkler.new()
+	sp.main = self
+	sp.position = Vector2(1857, 1003)
+	ysort.add_child(sp)
 	for r in 3:
 		for c in 4:
 			var plot = Plot.new()
@@ -593,7 +598,8 @@ const ZOOM_MAX := 1.6
 
 
 func set_zoom(z: float) -> void:
-	zoom_level = clampf(z, ZOOM_MIN, ZOOM_MAX)
+	# 室内镜头范围只有一屏大，不能缩小，否则会看到房间外面
+	zoom_level = clampf(z, 1.0 if inside else ZOOM_MIN, ZOOM_MAX)
 	cam.zoom = Vector2(zoom_level, zoom_level)
 
 
@@ -666,6 +672,7 @@ func enter_room(id: String) -> void:
 	var walk: Rect2 = r["walk"]
 	player.world_rect = walk
 	_move_player(Vector2(walk.get_center().x, walk.end.y - 6))
+	set_zoom(zoom_level)
 	_set_cam(r["view"])
 	get_tree().call_group("home_spots", "queue_redraw")
 	Sfx.play("door")

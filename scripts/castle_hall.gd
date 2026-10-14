@@ -35,7 +35,8 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	draw_rect(VIEW.grow(400), Color(0.14, 0.11, 0.16))
+	var bg := Rect2(VIEW.position.x - 260, VIEW.position.y - 110, VIEW.size.x + 500, VIEW.size.y + 400)  # 上边界在 y=730，不和小屋的镜头范围重叠
+	draw_rect(bg, Color(0.14, 0.11, 0.16))  # 左边界停在 x=2420，不会盖到室外
 	var wall := Rect2(ROOM.position, Vector2(ROOM.size.x, 130))
 	var floor_r := Rect2(ROOM.position + Vector2(0, 130), Vector2(ROOM.size.x, ROOM.size.y - 130))
 	# 石墙

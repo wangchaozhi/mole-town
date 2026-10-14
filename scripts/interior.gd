@@ -33,7 +33,8 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	draw_rect(VIEW.grow(400), Color(0.18, 0.12, 0.1))  # 比镜头范围大一圈，避免露出外面的草地
+	# 背景从 x=2420 往右铺满（世界只到 2400，室外镜头看不到这里），避免露出外面的草地
+	draw_rect(Rect2(2420, -600, 2400, 3000), Color(0.18, 0.12, 0.1))
 	var wall := Rect2(ROOM.position, Vector2(ROOM.size.x, 110))
 	var floor_r := Rect2(ROOM.position + Vector2(0, 110), Vector2(ROOM.size.x, ROOM.size.y - 110))
 	# 墙纸：浅粉色竖条纹

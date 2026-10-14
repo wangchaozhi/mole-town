@@ -23,7 +23,7 @@ func build() -> void:
 	title.add_child(ui._button("关闭", hide))
 	v.add_child(title)
 	var tabs := HBoxContainer.new()
-	for t in [["买种子", "seeds"], ["卖东西", "sell"], ["帽子", "hats"], ["家具", "furniture"], ["拉姆用品", "lahm"]]:
+	for t in [["买种子", "seeds"], ["卖东西", "sell"], ["帽子", "hats"], ["家具", "furniture"], ["工具", "tools"], ["拉姆用品", "lahm"]]:
 		tabs.add_child(ui._button(t[0], set_tab.bind(t[1])))
 	v.add_child(tabs)
 	var scroll := ScrollContainer.new()
@@ -121,6 +121,23 @@ func populate() -> void:
 					_row(label, [["Lv%d 解锁" % int(h.get("level", 1)), noop, true]])
 				else:
 					_row(label, [["购买并穿戴", wear.bind(id)]])
+		"tools":
+			for i in range(1, GameState.RODS.size()):
+				var r: Dictionary = GameState.RODS[i]
+				var desc := "%s   %d豆\n绿色区域更宽、标记移动更慢%s" % [r["name"], int(r["price"]), "，更容易钓到金鱼" if i == 2 else ""]
+				if GameState.rod_level >= i:
+					_row(desc, [["已拥有", noop, true]])
+				elif GameState.player_level < int(r["level"]):
+					_row(desc, [["Lv%d 解锁" % int(r["level"]), noop, true]])
+				else:
+					_row(desc, [["购买", _buy_rod.bind(i)]])
+			var sd := "自动洒水器   %d豆\n装在农场中间，每 40 秒给所有缺水的作物浇水" % GameState.SPRINKLER_PRICE
+			if GameState.has_sprinkler:
+				_row(sd, [["已安装", noop, true]])
+			elif GameState.player_level < GameState.SPRINKLER_LEVEL:
+				_row(sd, [["Lv%d 解锁" % GameState.SPRINKLER_LEVEL, noop, true]])
+			else:
+				_row(sd, [["购买", _buy_sprinkler]])
 		"furniture":
 			list.add_child(ui._label("买好的家具在背包里点「摆放」，放到农场旁边的「我的小院」里。好友串门时能看到哦！", 15))
 			for id in GameState.FURNITURE:
@@ -196,4 +213,20 @@ func lahm_acc(id: String) -> void:
 		GameState.owned_lahm_accs.append(id)
 		ui.show_toast("给拉姆买了%s！" % GameState.LAHM_ACCS[id]["name"])
 	GameState.set_lahm_acc(id)
+	populate()
+
+
+func _buy_rod(lv: int) -> void:
+	if GameState.buy_rod(lv):
+		ui.show_toast("买到了%s！钓鱼更轻松了" % GameState.RODS[lv]["name"])
+	else:
+		ui.show_toast("摩尔豆不够啦！")
+	populate()
+
+
+func _buy_sprinkler() -> void:
+	if GameState.buy_sprinkler():
+		ui.show_toast("自动洒水器装好了！就在农场中间")
+	else:
+		ui.show_toast("摩尔豆不够啦！")
 	populate()

@@ -124,6 +124,11 @@ func _run() -> void:
 	ui.shop.wear("red_cap")
 	check(GameState.hat == "red_cap" and p.hat == "red_cap", "买帽子并戴上")
 
+	GameState.add_exp(GameState.exp_for_level(6) - GameState.player_exp)
+	GameState.add_beans(2000)
+	check(GameState.buy_rod(1) and GameState.rod_level == 1 and not GameState.buy_rod(1), "买好鱼竿（不能重复买）")
+	check(GameState.buy_sprinkler() and GameState.has_sprinkler, "买自动洒水器")
+
 	print("[拉姆]")
 	var lahm = get_tree().get_first_node_in_group("my_lahm")
 	GameState.lahm_hunger = 30.0
@@ -154,7 +159,7 @@ func _run() -> void:
 
 	print("[等级]")
 	GameState.add_exp(GameState.exp_for_level(3) - GameState.player_exp)
-	check(GameState.player_level == 3 and GameState.is_unlocked("pumpkin"), "升到 3 级解锁南瓜")
+	check(GameState.player_level >= 3 and GameState.is_unlocked("pumpkin"), "3 级以上解锁南瓜")
 
 	print("[小院]")
 	GameState.add_item("furn_pot")

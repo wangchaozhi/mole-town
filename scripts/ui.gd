@@ -880,8 +880,10 @@ func _fish_process(delta: float) -> void:
 				fish_timer = 3.5
 				fish_marker = 0.0
 				fish_dir = 1.0
-				fish_zone = Vector2(randf_range(0.15, 0.7), randf_range(0.14, 0.24))
-				fish_speed = randf_range(1.2, 2.0)
+				var rod := GameState.rod_level
+				fish_zone = Vector2(randf_range(0.15, 0.6), randf_range(0.14, 0.24) * (1.0 + 0.4 * rod))
+				fish_speed = randf_range(1.2, 2.0) * (1.0 - 0.15 * rod)
+				fish_zone.x = minf(fish_zone.x, 1.0 - fish_zone.y)
 				fish_label.text = "鱼上钩了！红色标记在绿色区域时按空格收杆！"
 				Sfx.play("bite")
 				player.bite = true
@@ -935,7 +937,12 @@ func _fish_weight(id: String) -> int:
 	if info.has("season") and int(info["season"]) != GameState.season():
 		return 0  # 不是这个季节的鱼
 	var w := int(info["weight"])
-	return w * 2 if id == "gold_fish" and GameState.festival() == "fishing" else w
+	if id == "gold_fish":
+		if GameState.festival() == "fishing":
+			w *= 2
+		if GameState.rod_level >= 2:
+			w = roundi(w * 1.5)  # 金鱼竿更容易钓到金鱼
+	return w
 
 
 func _roll_fish() -> String:

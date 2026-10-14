@@ -21,6 +21,7 @@ var bubble_timer := 0.0
 var fishing := false
 var bite := false
 var anim_t := 0.0
+var rod_color_gold := false
 var emote := ""
 var emote_t := 0.0
 
@@ -162,7 +163,8 @@ func _draw() -> void:
 	if fishing:
 		var hand2 := Vector2(facing * 20.0, -26.0)
 		var tip := Vector2(facing * 64.0, -82.0)
-		draw_line(hand2, tip, Color(0.45, 0.28, 0.12), 3.0)
+		var rod_col := Color(1, 0.8, 0.2) if rod_color_gold else Color(0.45, 0.28, 0.12)
+		draw_line(hand2, tip, rod_col, 3.0)
 		var bob_p := Vector2(facing * 100.0, 4.0 + sin(anim_t * 3.0) * 2.0)
 		if bite:
 			bob_p.y += 5.0 + sin(anim_t * 25.0) * 3.0

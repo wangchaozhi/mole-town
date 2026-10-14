@@ -12,6 +12,8 @@ func _ready() -> void:
 	speed = 240.0
 	hat = GameState.hat
 	GameState.hat_changed.connect(func(): hat = GameState.hat)
+	rod_color_gold = GameState.rod_level >= 2
+	GameState.tools_changed.connect(func(): rod_color_gold = GameState.rod_level >= 2)
 	arrived.connect(_on_arrived)
 
 

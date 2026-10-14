@@ -301,7 +301,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "owned_hats": owned_hats, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
+		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
@@ -326,6 +326,8 @@ func load_game() -> bool:
 	selected_seed = str(data.get("selected_seed", "carrot"))
 	hat = str(data.get("hat", "none"))
 	owned_hats = data.get("owned_hats", ["none"])
+	rod_level = clampi(int(data.get("rod_level", 0)), 0, 2)
+	has_sprinkler = bool(data.get("has_sprinkler", false))
 	lahm_acc = str(data.get("lahm_acc", "none"))
 	owned_lahm_accs = data.get("owned_lahm_accs", ["none"])
 	if not LAHM_ACCS.has(lahm_acc):
@@ -494,6 +496,8 @@ func reset_game() -> void:
 	owned_hats = ["none"]
 	lahm_acc = "none"
 	owned_lahm_accs = ["none"]
+	rod_level = 0
+	has_sprinkler = false
 	lahm_hunger = 80.0
 	lahm_exp = 0
 	lahm_level = 1
@@ -1182,3 +1186,37 @@ func _read_save(path: String):
 	if json.parse(f.get_as_text()) != OK:
 		return null
 	return json.data if typeof(json.data) == TYPE_DICTIONARY else null
+
+
+# ---------- 工具升级 ----------
+
+const RODS := [
+	{"name": "普通鱼竿", "price": 0, "level": 1},
+	{"name": "好鱼竿", "price": 300, "level": 3},
+	{"name": "金鱼竿", "price": 800, "level": 6},
+]
+const SPRINKLER_PRICE := 600
+const SPRINKLER_LEVEL := 5
+
+signal tools_changed
+
+var rod_level := 0  # 0 普通 / 1 好鱼竿 / 2 金鱼竿
+var has_sprinkler := false
+
+
+func buy_rod(lv: int) -> bool:
+	if lv <= rod_level or lv >= RODS.size() or player_level < int(RODS[lv]["level"]):
+		return false
+	if not spend_beans(int(RODS[lv]["price"])):
+		return false
+	rod_level = lv
+	tools_changed.emit()
+	return true
+
+
+func buy_sprinkler() -> bool:
+	if has_sprinkler or player_level < SPRINKLER_LEVEL or not spend_beans(SPRINKLER_PRICE):
+		return false
+	has_sprinkler = true
+	tools_changed.emit()
+	return true
