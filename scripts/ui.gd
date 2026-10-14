@@ -77,6 +77,7 @@ func _ready() -> void:
 	root.theme = GameState.ui_theme
 	add_child(root)
 	_build_hud()
+	_build_minimap()  # 先建小地图，后面的面板都盖在它上面
 	_build_seed_bar()
 	_build_chat()
 	_build_dialog()
@@ -96,7 +97,6 @@ func _ready() -> void:
 	progress.ui = self
 	add_child(progress)
 	progress.build()
-	_build_minimap()
 	act = preload("res://scripts/ui_activities.gd").new()
 	act.ui = self
 	add_child(act)
@@ -828,7 +828,11 @@ func start_fishing(pond_pos: Vector2) -> void:
 	var dx: float = pond_pos.x - player.position.x
 	if absf(dx) > 1.0:
 		player.facing = signf(dx)
-	fish_label.text = "等待鱼儿上钩……（太早收杆会把鱼吓跑哦）"
+	var seasonal := ""
+	for id in GameState.FISH:
+		if GameState.FISH[id].get("season", -1) == GameState.season():
+			seasonal = GameState.item_name(id)
+	fish_label.text = "等待鱼儿上钩……（太早收杆会把鱼吓跑哦）\n%s季限定：%s" % [GameState.season_name(), seasonal]
 	Sfx.play("splash")
 	fish_panel.visible = true
 	fish_bar.queue_redraw()
@@ -893,7 +897,10 @@ func _reel() -> void:
 
 
 func _fish_weight(id: String) -> int:
-	var w := int(GameState.FISH[id]["weight"])
+	var info: Dictionary = GameState.FISH[id]
+	if info.has("season") and int(info["season"]) != GameState.season():
+		return 0  # 不是这个季节的鱼
+	var w := int(info["weight"])
 	return w * 2 if id == "gold_fish" and GameState.festival() == "fishing" else w
 
 

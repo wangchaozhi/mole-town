@@ -24,10 +24,15 @@ const CROPS := {
 }
 
 const FISH := {
-	"small_fish": {"name": "小鱼", "sell": 8, "weight": 50},
-	"big_fish": {"name": "大鱼", "sell": 22, "weight": 28},
-	"gold_fish": {"name": "金鱼", "sell": 60, "weight": 8},
-	"boot": {"name": "破靴子", "sell": 1, "weight": 14},
+	"small_fish": {"name": "小鱼", "sell": 8, "weight": 50, "color": Color(0.55, 0.72, 0.88)},
+	"big_fish": {"name": "大鱼", "sell": 22, "weight": 28, "color": Color(0.3, 0.5, 0.82)},
+	"gold_fish": {"name": "金鱼", "sell": 60, "weight": 8, "color": Color(1.0, 0.75, 0.15)},
+	"boot": {"name": "破靴子", "sell": 1, "weight": 14, "color": Color(0.5, 0.35, 0.25)},
+	# 季节限定的鱼：只在对应季节能钓到
+	"sakura_fish": {"name": "樱花鱼", "sell": 32, "weight": 14, "season": 0, "color": Color(1.0, 0.65, 0.78)},
+	"tropical_fish": {"name": "热带鱼", "sell": 36, "weight": 14, "season": 1, "color": Color(0.2, 0.8, 0.75)},
+	"maple_carp": {"name": "枫叶鲤", "sell": 40, "weight": 14, "season": 2, "color": Color(0.9, 0.4, 0.15)},
+	"ice_fish": {"name": "冰鱼", "sell": 45, "weight": 14, "season": 3, "color": Color(0.75, 0.9, 1.0)},
 }
 
 const HATS := {
@@ -487,7 +492,7 @@ const ACHIEVEMENTS := [
 	{"id": "first_fish", "name": "初次垂钓", "desc": "钓到 1 条鱼", "stat": "fish_total", "target": 1, "reward": 20},
 	{"id": "angler", "name": "钓鱼达人", "desc": "累计钓到 30 条鱼", "stat": "fish_total", "target": 30, "reward": 150},
 	{"id": "gold_fish", "name": "金光闪闪", "desc": "钓到一条金鱼", "stat": "c:gold_fish", "target": 1, "reward": 100},
-	{"id": "all_fish", "name": "湖中宝藏", "desc": "集齐湖里能钓到的所有东西", "stat": "fish_kinds", "target": 4, "reward": 120},
+	{"id": "all_fish", "name": "湖中宝藏", "desc": "集齐湖里能钓到的所有东西（包括四季限定的鱼）", "stat": "fish_kinds", "target": 8, "reward": 120},
 	{"id": "quests", "name": "乐乐的好帮手", "desc": "完成 10 个乐乐的任务", "stat": "quests_done", "target": 10, "reward": 200},
 	{"id": "rich", "name": "小富翁", "desc": "同时拥有 1000 摩尔豆", "stat": "beans", "target": 1000, "reward": 100},
 	{"id": "visitor", "name": "串门达人", "desc": "去好友家串门 1 次", "stat": "visits", "target": 1, "reward": 30},
@@ -735,7 +740,7 @@ const NPC_INFO := {
 	"乐乐": {"likes": ["strawberry", "sunflower", "strawberry_cake"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
 	"店长豆豆": {"likes": ["gold_fish", "watermelon", "carrot_soup"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
 	"小黄": {"likes": ["corn", "carrot", "grilled_corn"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
-	"嘟嘟": {"likes": ["big_fish", "small_fish", "fish_soup"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
+	"嘟嘟": {"likes": ["big_fish", "small_fish", "fish_soup", "ice_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
 	"米米": {"likes": ["pumpkin", "strawberry", "pumpkin_pie"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
 	"阿呆": {"likes": ["watermelon", "gold_fish", "watermelon_smoothie"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
 }

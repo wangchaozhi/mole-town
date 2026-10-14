@@ -111,8 +111,7 @@ func _draw_item(c: Control, id: String, known: bool) -> void:
 		elif GameState.DISHES.has(id):
 			col = GameState.DISHES[id]["color"]
 		else:
-			col = {"small_fish": Color(0.55, 0.72, 0.88), "big_fish": Color(0.3, 0.5, 0.82),
-				"gold_fish": Color(1.0, 0.75, 0.15), "boot": Color(0.5, 0.35, 0.25)}[id]
+			col = GameState.FISH[id]["color"]
 	if GameState.DISHES.has(id):
 		_draw_dish(c, m, id, col, known)
 		if not known:
