@@ -13,6 +13,7 @@ const RemoteMole = preload("res://scripts/remote_mole.gd")
 const Rain = preload("res://scripts/rain.gd")
 const Furniture = preload("res://scripts/furniture.gd")
 const Gate = preload("res://scripts/gate.gd")
+const Board = preload("res://scripts/board.gd")
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
@@ -306,6 +307,9 @@ func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, 
 
 func _build_props() -> void:
 	_prop("castle", Vector2(1200, 330))
+	var board = Board.new()
+	board.position = Vector2(1455, 700)
+	ysort.add_child(board)
 	var gate = Gate.new()
 	gate.position = Vector2(1200, 330)
 	ysort.add_child(gate)

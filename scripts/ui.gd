@@ -61,6 +61,10 @@ var signin_panel: PanelContainer
 var minimap_panel: PanelContainer
 var gift_panel: PanelContainer
 var game_panel: PanelContainer
+var board_panel: PanelContainer
+var board_list: VBoxContainer
+var board_edit: LineEdit
+var board_scroll: ScrollContainer
 var game_view
 var game_result: HBoxContainer
 var game_result_label: Label
@@ -112,6 +116,7 @@ func _ready() -> void:
 	_build_minimap()
 	_build_gift()
 	_build_minigame()
+	_build_board()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -557,6 +562,7 @@ func _build_help() -> void:
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
+		+ "• 留言板（广场右边）：贴一张留言，联机时所有人都能看到\n" \
 		+ "• NPC 好感：每个 NPC 每天可以送一次礼物，送他们喜欢的东西好感涨得快，好感到 20 / 50 / 100 会收到回礼\n" \
 		+ "• 我的小院（农场左边）：在商店「家具」页买家具，背包里点「摆放」装扮小院，点家具可以移动或收起\n" \
 		+ "• 拉姆：你的小宠物，饿了会飞不动，点击它喂食，吃饱了点击是摸摸它；亲密度升级后会帮你抓虫、找宝物、浇水\n" \
@@ -700,6 +706,7 @@ func _close_all() -> void:
 	signin_panel.visible = false
 	gift_panel.visible = false
 	_close_minigame()
+	board_panel.visible = false
 	if fishing:
 		_stop_fishing()
 
@@ -1710,3 +1717,81 @@ func _close_minigame() -> void:
 		game_view.active = false
 	game_panel.visible = false
 	GameState.input_locked = false
+
+
+# ---------- 留言板 ----------
+
+func _build_board() -> void:
+	board_panel = _panel()
+	_centered(board_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	board_panel.add_child(v)
+	var title := HBoxContainer.new()
+	var tl := _label("广场留言板", 22)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_child(tl)
+	title.add_child(_button("关闭", func(): board_panel.visible = false))
+	v.add_child(title)
+	board_scroll = ScrollContainer.new()
+	board_scroll.custom_minimum_size = Vector2(520, 300)
+	board_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	board_list = VBoxContainer.new()
+	board_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board_list.add_theme_constant_override("separation", 6)
+	board_scroll.add_child(board_list)
+	v.add_child(board_scroll)
+	var hb := HBoxContainer.new()
+	board_edit = LineEdit.new()
+	board_edit.max_length = 40
+	board_edit.placeholder_text = "写点什么吧（最多 40 字）"
+	board_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board_edit.text_submitted.connect(func(_t): _post_board())
+	hb.add_child(board_edit)
+	hb.add_child(_button("贴上去", _post_board))
+	v.add_child(hb)
+	board_panel.visible = false
+	Net.board_changed.connect(func():
+		if board_panel.visible:
+			_refresh_board())
+
+
+func open_board() -> void:
+	close_popups()
+	_refresh_board()
+	board_panel.visible = true
+
+
+func _refresh_board() -> void:
+	for c in board_list.get_children():
+		c.queue_free()
+	var b := Net.current_board()
+	if b.is_empty():
+		board_list.add_child(_label("还没有人留言，来写第一条吧！", 16))
+	var colors := [Color(1, 0.97, 0.75), Color(0.85, 0.94, 1), Color(1, 0.88, 0.9), Color(0.88, 1, 0.88)]
+	for i in range(b.size() - 1, -1, -1):
+		var m: Dictionary = b[i]
+		var note := PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = colors[i % colors.size()]
+		sb.set_corner_radius_all(6)
+		sb.set_content_margin_all(8)
+		note.add_theme_stylebox_override("panel", sb)
+		var l := _label("%s（第%d天）：%s" % [m["name"], int(m["day"]), m["text"]], 16)
+		l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+		l.custom_minimum_size = Vector2(480, 0)
+		note.add_child(l)
+		board_list.add_child(note)
+
+
+func _post_board() -> void:
+	var text := board_edit.text.strip_edges()
+	board_edit.text = ""
+	board_edit.release_focus()
+	if text == "":
+		return
+	Net.post_board(text)
+	Sfx.play("pop")
+	show_toast("留言已贴到留言板上")
+	if not Net.is_online() or multiplayer.is_server():
+		_refresh_board()

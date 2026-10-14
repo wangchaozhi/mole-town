@@ -177,6 +177,14 @@ func _run() -> void:
 	ui._close_minigame()
 	check(not GameState.input_locked, "离开小游戏解锁移动")
 
+	print("[留言板]")
+	var n0: int = GameState.board.size()
+	Net.post_board("冒烟测试留言")
+	check(GameState.board.size() == n0 + 1 and GameState.board[-1]["name"] == "测试员", "单机发布留言")
+	ui.open_board()
+	check(ui.board_panel.visible and ui.board_list.get_child_count() > 0, "打开留言板")
+	ui._close_all()
+
 	print("[存档]")
 	GameState.save_game()
 	var snapshot := {"beans": GameState.beans, "level": GameState.player_level, "hat": GameState.hat, "name": GameState.player_name}

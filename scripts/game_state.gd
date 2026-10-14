@@ -71,6 +71,7 @@ var quest: Dictionary = {}
 var quests_done: int = 0
 var plots: Dictionary = {}
 var home: Array = []  # 小院里摆放的家具 [{"id", "x", "y"}]
+var board: Array = []  # 留言板 [{"name", "text", "day"}]，联机时房主的留言板是大家共用的
 var offline_seconds: float = 0.0
 var font: Font
 var ui_theme: Theme
@@ -259,7 +260,7 @@ func save_game() -> void:
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "best_catch": best_catch, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
-		"plots": plots, "home": home, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
+		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f:
@@ -310,6 +311,10 @@ func load_game() -> bool:
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
+	board = []
+	for m in data.get("board", []):
+		if typeof(m) == TYPE_DICTIONARY:
+			board.append({"name": str(m.get("name", "")).left(10), "text": str(m.get("text", "")).left(40), "day": int(m.get("day", 1))})
 	npc_affinity = {}
 	var na: Dictionary = data.get("npc_affinity", {})
 	for k in na:
@@ -447,6 +452,7 @@ func reset_game() -> void:
 	npc_affinity = {}
 	npc_gift_day = {}
 	stats = {}
+	board = []
 	achievements = []
 	raining = false
 	weather_timer = 60.0
@@ -785,3 +791,12 @@ func finish_catch(score: int) -> Array:
 		add_exp(exp_)
 	check_achievements()
 	return [beans_, exp_, record]
+
+
+const BOARD_MAX := 30
+
+
+func add_board_message(who: String, text: String, d: int) -> void:
+	board.append({"name": who.left(10), "text": text.strip_edges().left(40), "day": d})
+	while board.size() > BOARD_MAX:
+		board.pop_front()

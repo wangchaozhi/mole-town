@@ -9,6 +9,7 @@ signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool, farm: i
 signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
 signal item_received(id: int, item: String, n: int)
+signal board_changed
 signal peer_emote(id: int, kind: String)
 signal visit_changed
 signal farm_visitor_joined(id: int)
@@ -87,6 +88,8 @@ func leave() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
 	visitors.clear()
+	remote_board = []
+	board_changed.emit()
 	if visiting != 0:
 		visiting = 0
 		visit_changed.emit()
@@ -145,6 +148,7 @@ func register(info) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	players[id] = _clean(info)
 	weather.rpc_id(id, GameState.raining)
+	sync_board.rpc_id(id, GameState.board)
 	_broadcast_roster()
 
 
@@ -324,3 +328,44 @@ func send_item(id: int, item: String, n: int) -> void:
 func gift_item(item: String, n: int) -> void:
 	if GameState.is_giftable(item) and n >= 1 and n <= 20:
 		item_received.emit(multiplayer.get_remote_sender_id(), item, n)
+
+
+# ---------- 留言板 ----------
+
+var remote_board: Array = []  # 联机时从房主那里收到的留言板
+
+
+## 现在应该显示的留言板：客户端显示房主的，房主和单机显示自己的
+func current_board() -> Array:
+	return remote_board if is_online() and not multiplayer.is_server() else GameState.board
+
+
+func post_board(text: String) -> void:
+	text = text.strip_edges().left(40)
+	if text == "":
+		return
+	if is_online() and not multiplayer.is_server():
+		board_post.rpc_id(1, text)
+	else:
+		GameState.add_board_message(GameState.player_name, text, GameState.day)
+		if is_online():
+			sync_board.rpc(GameState.board)
+		board_changed.emit()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func board_post(text: String) -> void:
+	if not multiplayer.is_server():
+		return
+	GameState.add_board_message(player_name(multiplayer.get_remote_sender_id()), str(text), GameState.day)
+	sync_board.rpc(GameState.board)
+	board_changed.emit()
+
+
+@rpc("authority", "call_remote", "reliable")
+func sync_board(b: Array) -> void:
+	remote_board = []
+	for m in b.slice(-GameState.BOARD_MAX):
+		if typeof(m) == TYPE_DICTIONARY:
+			remote_board.append({"name": str(m.get("name", "")).left(10), "text": str(m.get("text", "")).left(40), "day": int(m.get("day", 1))})
+	board_changed.emit()
