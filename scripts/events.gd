@@ -95,13 +95,15 @@ func _hourly(h: int) -> void:
 				l.queue_free()  # 天黑前小拉姆自己找到家了
 
 
-## 秋天每天早上（或者白天第一次进游戏时）在小镇里撒 4 堆落叶，季节过了就清掉
+## 秋天每天早上（或者白天第一次进游戏时）在小镇里撒 4 堆落叶，冬天是 4 堆雪；季节过了就清掉
 func spawn_leaf_piles() -> void:
 	if main == null:
 		return
-	if GameState.season() != 2:
-		for lp in get_tree().get_nodes_in_group("leaf_piles"):
+	var winter := GameState.season() == 3
+	for lp in get_tree().get_nodes_in_group("leaf_piles"):
+		if GameState.season() < 2 or lp.snow != winter:
 			lp.queue_free()
+	if GameState.season() < 2:
 		return
 	if GameState.leaf_day == GameState.day or Net.visiting != 0:
 		return
@@ -110,6 +112,7 @@ func spawn_leaf_piles() -> void:
 	spots.shuffle()
 	for i in 4:
 		var lp = LeafPile.new()
+		lp.snow = winter
 		lp.position = spots[i]
 		main.ysort.add_child(lp)
 

@@ -82,7 +82,7 @@ var lahm_exp: int = 0
 var player_exp: int = 0
 var player_level: int = 1
 var lahm_level: int = 1
-var leaf_day: int = -1  # 哪一天已经撒过落叶堆
+var leaf_day: int = -1  # 哪一天已经撒过落叶堆 / 雪堆（存档，退出重进不会再刷）
 var lahm_hide_day: int = -1  # 今天是否已经和拉姆玩过捉迷藏
 var day: int = 1
 var minutes: float = 480.0
@@ -326,7 +326,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day,
+		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day, "leaf_day": leaf_day,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "day_log": day_log, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
@@ -362,6 +362,7 @@ func load_game() -> bool:
 	lahm_hunger = float(data.get("lahm_hunger", 80.0))
 	lahm_exp = int(data.get("lahm_exp", 0))
 	lahm_hide_day = int(data.get("lahm_hide_day", -1))
+	leaf_day = int(data.get("leaf_day", -1))
 	player_exp = int(data.get("player_exp", 0))
 	player_level = clampi(int(data.get("player_level", 1)), 1, MAX_LEVEL)
 	lahm_level = clampi(int(data.get("lahm_level", 1)), 1, LAHM_LEVELS.size())
@@ -557,6 +558,7 @@ func reset_game() -> void:
 	lahm_hunger = 80.0
 	lahm_exp = 0
 	lahm_hide_day = -1
+	leaf_day = -1
 	lahm_level = 1
 	player_exp = 0
 	player_level = 1
