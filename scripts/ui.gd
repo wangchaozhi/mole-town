@@ -803,6 +803,8 @@ func on_npc_interact(npc) -> void:
 	match npc.role:
 		"lele":
 			_lele_dialog(npc)
+		"king":
+			_king_dialog(npc)
 		"shop":
 			var m := GameState.market()
 			show_dialog(_npc_title(npc), "欢迎光临摩尔百货！今天%s收购价特别高（×1.5），%s种子打 6 折哦~\n种子、拉姆果、漂亮的帽子，应有尽有，作物和鱼也可以卖给我。" % [GameState.item_name(m["hot"]), GameState.item_name(m["sale"])],
@@ -1087,3 +1089,27 @@ func _join_room(ip: String, port: int) -> void:
 	var err := Net.join(ip, port)
 	if err != "":
 		show_toast(err)
+
+
+# ---------- 国王的每周挑战 ----------
+
+func _king_dialog(npc) -> void:
+	var w := GameState.weekly()
+	var prog := GameState.weekly_progress()
+	var head := "哈哈，小摩尔，欢迎来到我的城堡！\n本周挑战：%s（%d/%d）  奖励 %d 摩尔豆" % [w["text"], prog, int(w["target"]), GameState.WEEKLY_REWARD]
+	if GameState.weekly_claimed:
+		show_dialog("摩尔国王", head + "\n这周的奖励你已经领过啦，下周再来挑战吧！", [["好的", _noop]])
+	elif GameState.weekly_done():
+		show_dialog("摩尔国王", head + "\n了不起！你完成了本周的挑战！", [["领取奖励", _claim_weekly.bind(npc)]])
+	else:
+		show_dialog("摩尔国王", head + "\n每 7 天换一个挑战，加油哦！", [["我会努力的！", _noop]])
+
+
+func _claim_weekly(npc) -> void:
+	var had_trophy := GameState.count("furn_trophy")
+	if GameState.claim_weekly():
+		Sfx.play("catch")
+		npc.play_emote("happy")
+		npc.say("这是你应得的！")
+		var extra := "，还有一座金奖杯（放进背包了，可以摆在小院里）" if GameState.count("furn_trophy") > had_trophy else ""
+		show_toast("获得 %d 摩尔豆%s！" % [GameState.WEEKLY_REWARD, extra])

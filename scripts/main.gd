@@ -22,6 +22,12 @@ const TutorialArrow = preload("res://scripts/tutorial_arrow.gd")
 const COTTAGE_POS := Vector2(1010, 1175)
 const INTERIOR_WALK := Rect2(3030, 320, 420, 185)
 const WORLD_WALK := Rect2(40, 150, 2320, 1210)
+const CastleHall = preload("res://scripts/castle_hall.gd")
+## 室内房间：镜头范围、可走动范围、出门后站的位置、小地图上显示的位置
+const ROOMS := {
+	"cottage": {"view": Rect2(2600, 0, 1280, 720), "walk": Rect2(3030, 320, 420, 185), "exit": Vector2(1010, 1215), "map": Vector2(1010, 1175)},
+	"castle": {"view": Rect2(2680, 840, 1280, 720), "walk": Rect2(3030, 1160, 580, 230), "exit": Vector2(1200, 390), "map": Vector2(1200, 330)},
+}
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
@@ -36,6 +42,7 @@ var plots := []
 var cam: Camera2D
 var zoom_level := 1.0
 var inside := false  # 是否在自己的小屋里
+var room := "cottage"  # 当前所在的室内房间
 var rain_dim := 0.0
 var farm_sign
 var home_sign
@@ -313,7 +320,7 @@ func _prop(kind: String, pos: Vector2, text: String = "", size: Vector2 = Vector
 	return p
 
 
-func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, lines: Array) -> void:
+func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, lines: Array):
 	var npc = NPC.new()
 	npc.display_name = n
 	npc.role = role
@@ -323,12 +330,14 @@ func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, 
 	npc.lines = lines
 	npc.sleep_spot = SLEEP_SPOTS.get(n, Vector2.ZERO)
 	ysort.add_child(npc)
+	return npc
 
 
 func _build_props() -> void:
 	_prop("castle", Vector2(1200, 330))
 	add_child(FestivalDeco.new())
 	_build_cottage()
+	_build_castle_hall()
 	var arrow = TutorialArrow.new()
 	arrow.main = self
 	add_child(arrow)
@@ -453,7 +462,7 @@ func _sky_color(h: float) -> Color:
 
 ## 农场和小院属于“各家私有”的区域
 func _is_private(p: Vector2) -> bool:
-	return FARM_RECT.has_point(p) or GameState.HOME_RECT.has_point(p) or Interior.ROOM.has_point(p)
+	return FARM_RECT.has_point(p) or GameState.HOME_RECT.has_point(p) or Interior.ROOM.has_point(p) or CastleHall.ROOM.has_point(p)
 
 
 func _build_home(list: Array, remote: bool) -> void:
@@ -634,39 +643,50 @@ func _spot(kind: String, pos: Vector2) -> void:
 
 
 func map_position() -> Vector2:
-	return COTTAGE_POS if inside else player.position
+	return ROOMS[room]["map"] if inside else player.position
 
 
 func enter_home() -> void:
+	enter_room("cottage")
+
+
+func exit_home() -> void:
+	exit_room()
+
+
+## 进入室内（小屋 / 城堡大厅）：换走动范围和镜头范围
+func enter_room(id: String) -> void:
 	if inside:
 		return
 	cancel_placing()
 	ui.close_popups()
 	inside = true
-	player.world_rect = INTERIOR_WALK
-	_move_player(Vector2(Interior.ROOM.get_center().x, INTERIOR_WALK.end.y - 6))
-	var v := Interior.VIEW
+	room = id
+	var r: Dictionary = ROOMS[id]
+	var walk: Rect2 = r["walk"]
+	player.world_rect = walk
+	_move_player(Vector2(walk.get_center().x, walk.end.y - 6))
+	_set_cam(r["view"])
+	get_tree().call_group("home_spots", "queue_redraw")
+	Sfx.play("door")
+
+
+func exit_room() -> void:
+	if not inside:
+		return
+	inside = false
+	player.world_rect = WORLD_WALK
+	_move_player(ROOMS[room]["exit"])
+	_set_cam(Rect2(0, 0, 2400, 1400))
+	Sfx.play("door")
+
+
+func _set_cam(v: Rect2) -> void:
 	cam.limit_left = int(v.position.x)
 	cam.limit_top = int(v.position.y)
 	cam.limit_right = int(v.end.x)
 	cam.limit_bottom = int(v.end.y)
 	cam.reset_smoothing()
-	get_tree().call_group("home_spots", "queue_redraw")
-	Sfx.play("door")
-
-
-func exit_home() -> void:
-	if not inside:
-		return
-	inside = false
-	player.world_rect = WORLD_WALK
-	_move_player(COTTAGE_POS + Vector2(0, 40))
-	cam.limit_left = 0
-	cam.limit_top = 0
-	cam.limit_right = 2400
-	cam.limit_bottom = 1400
-	cam.reset_smoothing()
-	Sfx.play("door")
 
 
 func _move_player(p: Vector2) -> void:
@@ -683,8 +703,8 @@ func home_action(kind: String) -> void:
 	match kind:
 		"home_door":
 			enter_home()
-		"exit_door":
-			exit_home()
+		"exit_door", "castle_exit":
+			exit_room()
 		"bed":
 			if GameState.can_sleep():
 				_sleep()
@@ -742,3 +762,20 @@ func _lahm_wardrobe() -> void:
 		opts.append([GameState.LAHM_ACCS[a]["name"], GameState.set_lahm_acc.bind(a)])
 	opts.append(["算了", ui._noop])
 	ui.show_dialog("拉姆的饰品", "给拉姆戴什么呢？（新饰品在摩尔百货「拉姆用品」里买）", opts)
+
+
+# ---------- 城堡大厅 ----------
+
+func _build_castle_hall() -> void:
+	add_child(CastleHall.new())
+	var r := CastleHall.ROOM
+	_spot("castle_exit", Vector2(r.get_center().x, r.end.y - 4))
+	var king = _spawn_npc("摩尔国王", "king", Vector2(r.get_center().x, r.position.y + 205), "crown", Color(0.62, 0.45, 0.3),
+		["欢迎来到摩尔城堡！", "小镇的居民们都很勤劳啊~", "本周的挑战完成了吗？"])
+	king.scale = Vector2(1.3, 1.3)
+	king.world_rect = r  # 国王只在大厅里活动
+
+
+func castle_gate() -> void:
+	ui.show_dialog("摩尔城堡", "城堡大门开着，里面传来国王的笑声。要做什么呢？",
+		[["进入城堡", enter_room.bind("castle")], ["玩接果子小游戏", ui.open_minigame_intro], ["离开", ui._noop]])

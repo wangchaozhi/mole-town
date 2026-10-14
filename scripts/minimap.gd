@@ -53,7 +53,8 @@ func _draw() -> void:
 	draw_rect(Rect2(_m(Vector2(1630, 330)), Vector2(240, 150) * SCALE), Color(0.4, 0.65, 0.9))
 	if main != null:
 		for n in get_tree().get_nodes_in_group("npcs"):
-			draw_circle(_m(n.position), 2.5, Color(1, 0.95, 0.6))
+			if n.position.x < WORLD_SIZE.x:  # 城堡大厅里的国王在地图外
+				draw_circle(_m(n.position), 2.5, Color(1, 0.95, 0.6))
 		for r in main.remotes.values():
 			if r.visible:
 				draw_circle(_m(r.position), 3.5, Color(0.25, 0.55, 1.0))

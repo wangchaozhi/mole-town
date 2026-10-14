@@ -75,6 +75,7 @@ func _draw() -> void:
 		"swing": _swing()
 		"lahm_house": _lahm_house()
 		"windmill": _windmill()
+		"trophy": _trophy()
 
 
 func _pot() -> void:
@@ -199,3 +200,21 @@ func _windmill() -> void:
 		draw_colored_polygon(PackedVector2Array([hub + dir * 6, hub + dir * 44, hub + dir * 44 + side * 10, hub + dir * 10 + side * 10]), Color(0.95, 0.95, 0.95))
 		draw_line(hub, hub + dir * 44, Color(0.5, 0.35, 0.2), 2.0)
 	draw_circle(hub, 4.0, Color(0.4, 0.3, 0.2))
+
+
+func _trophy() -> void:
+	draw_rect(Rect2(-18, -16, 36, 16), Color(0.5, 0.35, 0.25))
+	draw_rect(Rect2(-12, -26, 24, 10), Color(0.6, 0.45, 0.3))
+	var gold := Color(1, 0.8, 0.2)
+	draw_rect(Rect2(-4, -40, 8, 14), gold.darkened(0.1))
+	var cup := PackedVector2Array()
+	for i in 13:
+		var a := PI * i / 12.0
+		cup.append(Vector2(cos(a) * 18, -54 + sin(a) * 16))
+	cup.append(Vector2(-18, -66))
+	cup.append(Vector2(18, -66))
+	draw_colored_polygon(cup, gold)
+	draw_arc(Vector2(-18, -56), 7.0, PI * 0.5, PI * 1.5, 8, gold, 3.0)
+	draw_arc(Vector2(18, -56), 7.0, -PI * 0.5, PI * 0.5, 8, gold, 3.0)
+	draw_circle(Vector2(-6, -58), 3.0, Color(1, 1, 0.8, 0.8))
+	D.text(self, Vector2(0, -72), "★", 14, Color(1, 0.95, 0.6))

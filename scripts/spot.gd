@@ -14,6 +14,7 @@ func hit_test(p: Vector2) -> bool:
 	var r: Rect2 = {
 		"home_door": Rect2(-30, -70, 60, 72),
 		"exit_door": Rect2(-40, -30, 80, 36),
+		"castle_exit": Rect2(-50, -30, 100, 36),
 		"bed": Rect2(-50, -60, 100, 66),
 		"wardrobe": Rect2(-34, -110, 68, 112),
 		"shelf": Rect2(-44, -100, 88, 80),
@@ -55,5 +56,5 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([p + Vector2(-6, 0), p + Vector2(6, 0), p + Vector2(4, -10), p + Vector2(-4, -10)]), Color(1, 0.82, 0.2))
 				draw_rect(Rect2(p + Vector2(-3, -14), Vector2(6, 4)), Color(1, 0.82, 0.2))
 			D.text(self, Vector2(0, -116), "奖杯架 %d" % n, 13, Color(0.45, 0.3, 0.2))
-		"exit_door":
+		"exit_door", "castle_exit":
 			D.text(self, Vector2(0, -2), "出门", 13, Color(1, 0.95, 0.85))

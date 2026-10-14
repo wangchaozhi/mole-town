@@ -57,6 +57,7 @@ const FURNITURE := {
 	"swing": {"name": "秋千", "price": 160, "level": 5},
 	"lahm_house": {"name": "拉姆小屋", "price": 220, "level": 6},
 	"windmill": {"name": "风车", "price": 320, "level": 8},
+	"trophy": {"name": "金奖杯", "price": 0, "level": 1, "shop": false},  # 国王的每周挑战奖励，商店不卖
 }
 const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围
 
@@ -301,7 +302,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -342,6 +343,9 @@ func load_game() -> bool:
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
 	tutorial_step = int(data.get("tutorial_step", -1))
+	weekly_week = int(data.get("weekly_week", -1))
+	weekly_base = int(data.get("weekly_base", 0))
+	weekly_claimed = bool(data.get("weekly_claimed", false))
 	best_catch = int(data.get("best_catch", 0))
 	contest_day = int(data.get("contest_day", -1))
 	contest_count = int(data.get("contest_count", 0))
@@ -995,6 +999,7 @@ func _start_new_day() -> void:
 	var old_season := season()
 	help_today = 0
 	day += 1
+	_sync_week()
 	if season() != old_season:
 		season_changed.emit()
 		toast.emit(["春天来了，萝卜和草莓长得最快！", "夏天到了，玉米、向日葵和西瓜长得最快！", "秋天来了，南瓜和萝卜长得最快！", "冬天到了，下雪啦，作物长得慢一些~"][season()])
@@ -1081,3 +1086,60 @@ func set_lahm_acc(id: String) -> void:
 	lahm_acc = id
 	lahm_acc_changed.emit()
 	Net.send_info()
+
+
+# ---------- 国王的每周挑战 ----------
+# 每 7 个游戏日一周，挑战内容按周轮换；进度 = 这一周里对应统计增加了多少
+
+const WEEKLY := [
+	{"stat": "harvest_total", "target": 20, "text": "收获 20 个作物"},
+	{"stat": "fish_total", "target": 10, "text": "钓到 10 条鱼"},
+	{"stat": "cook_total", "target": 5, "text": "做 5 道菜"},
+	{"stat": "quests_done", "target": 3, "text": "完成 3 个乐乐的任务"},
+]
+const WEEKLY_REWARD := 300
+
+var weekly_week := -1
+var weekly_base := 0
+var weekly_claimed := false
+
+
+func week() -> int:
+	return (day - 1) / 7
+
+
+func weekly() -> Dictionary:
+	_sync_week()
+	return WEEKLY[week() % WEEKLY.size()]
+
+
+func _sync_week() -> void:
+	if weekly_week != week():
+		weekly_week = week()
+		weekly_base = stat_value(WEEKLY[week() % WEEKLY.size()]["stat"])
+		weekly_claimed = false
+
+
+func weekly_progress() -> int:
+	var w := weekly()
+	return clampi(stat_value(w["stat"]) - weekly_base, 0, int(w["target"]))
+
+
+func weekly_done() -> bool:
+	return weekly_progress() >= int(weekly()["target"])
+
+
+## 领取每周挑战奖励：摩尔豆 + 经验，第一次还会得到「金奖杯」家具
+func claim_weekly() -> bool:
+	if weekly_claimed or not weekly_done():
+		return false
+	weekly_claimed = true
+	add_beans(WEEKLY_REWARD)
+	add_exp(50)
+	var has_trophy := count("furn_trophy") > 0
+	for f in home:
+		if f["id"] == "trophy":
+			has_trophy = true
+	if not has_trophy:
+		add_item("furn_trophy")
+	return true

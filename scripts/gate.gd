@@ -15,4 +15,4 @@ func get_interact_point() -> Vector2:
 
 
 func interact(_pl) -> void:
-	get_tree().call_group("ui", "open_minigame_intro")
+	get_tree().current_scene.castle_gate()

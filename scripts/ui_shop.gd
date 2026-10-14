@@ -125,6 +125,8 @@ func populate() -> void:
 			list.add_child(ui._label("买好的家具在背包里点「摆放」，放到农场旁边的「我的小院」里。好友串门时能看到哦！", 15))
 			for id in GameState.FURNITURE:
 				var f: Dictionary = GameState.FURNITURE[id]
+				if not f.get("shop", true):
+					continue
 				var have := GameState.count("furn_" + id)
 				var info := "%s   %d豆%s" % [f["name"], f["price"], "（背包里有 %d 个）" % have if have > 0 else ""]
 				if GameState.player_level >= int(f["level"]):

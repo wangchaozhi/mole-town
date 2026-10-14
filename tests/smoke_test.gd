@@ -273,6 +273,21 @@ func _run() -> void:
 	main.home_action("exit_door")
 	check(not main.inside and not main.INTERIOR_WALK.has_point(p.position), "走出小屋")
 
+	print("[城堡大厅]")
+	main.enter_room("castle")
+	check(main.inside and main.room == "castle" and main.CastleHall.ROOM.has_point(p.position), "进入城堡大厅")
+	var w: Dictionary = GameState.weekly()
+	check(not GameState.weekly_done(), "每周挑战一开始没完成")
+	if w["stat"] == "quests_done":
+		GameState.quests_done += int(w["target"])
+	else:
+		GameState.stats[w["stat"]] = GameState.stat_value(w["stat"]) + int(w["target"])
+	b = GameState.beans
+	check(GameState.claim_weekly() and GameState.beans >= b + GameState.WEEKLY_REWARD, "完成每周挑战领奖")
+	check(GameState.count("furn_trophy") == 1 and not GameState.claim_weekly(), "得到金奖杯，同一周不能重复领")
+	main.exit_room()
+	check(not main.inside and p.position.distance_to(main.ROOMS["castle"]["exit"]) < 1.0, "走出城堡回到大门口")
+
 	print("[界面]")
 	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
 	ui.open_shop()

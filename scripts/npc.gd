@@ -32,7 +32,7 @@ static func is_bedtime() -> bool:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	if role != "shop" and is_bedtime():
+	if not role in ["shop", "king"] and is_bedtime():
 		_night()
 		return
 	if sleeping:
