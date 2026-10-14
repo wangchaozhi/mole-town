@@ -5,7 +5,7 @@ extends Node
 
 signal status_changed(text: String)
 signal roster_changed
-signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool)
+signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool, farm: int)
 signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
 signal visit_changed
@@ -172,14 +172,14 @@ func update_info(info) -> void:
 
 # ---------- 移动 / 聊天 / 送礼 ----------
 
-func send_move(pos: Vector2, target: Vector2, fishing: bool) -> void:
+func send_move(pos: Vector2, target: Vector2, fishing: bool, farm: int) -> void:
 	if is_online():
-		move.rpc(pos, target, fishing)
+		move.rpc(pos, target, fishing, farm)
 
 
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func move(pos: Vector2, target: Vector2, fishing: bool) -> void:
-	peer_moved.emit(multiplayer.get_remote_sender_id(), pos, target, fishing)
+func move(pos: Vector2, target: Vector2, fishing: bool, farm: int) -> void:
+	peer_moved.emit(multiplayer.get_remote_sender_id(), pos, target, fishing, farm)
 
 
 func send_chat(text: String) -> void:

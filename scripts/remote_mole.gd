@@ -2,6 +2,8 @@ extends "res://scripts/mole.gd"
 ## 其他联机玩家在本地的化身：根据网络消息走路、钓鱼、说话。
 
 var peer_id := 0
+var farm := 0  # 这位玩家此刻所在的是谁家的农场
+var lahm = null
 
 
 func _ready() -> void:
@@ -22,6 +24,10 @@ func net_move(pos: Vector2, to: Vector2, is_fishing: bool) -> void:
 		position = pos
 	move_to(to)
 	fishing = is_fishing
+
+
+func hit_test(p: Vector2) -> bool:
+	return visible and super.hit_test(p)
 
 
 func get_interact_point() -> Vector2:

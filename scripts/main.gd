@@ -11,6 +11,9 @@ const Lahm = preload("res://scripts/lahm.gd")
 const UI = preload("res://scripts/ui.gd")
 const RemoteMole = preload("res://scripts/remote_mole.gd")
 
+const FARM_RECT := Rect2(1570, 850, 560, 360)
+const HELP_REWARDS_PER_DAY := 20
+
 var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
 var farm_sign
@@ -108,7 +111,7 @@ func _ready() -> void:
 	sync.wait_time = 0.1
 	sync.autostart = true
 	sync.timeout.connect(func():
-		Net.send_move(player.position, player.target if player.moving else player.position, player.fishing))
+		Net.send_move(player.position, player.target if player.moving else player.position, player.fishing, my_farm()))
 	add_child(sync)
 	_on_roster_changed()
 
@@ -125,6 +128,11 @@ func _ready() -> void:
 		if not Net.visitors.is_empty():
 			Net.push_farm(_farm_states()))
 	add_child(farm_sync)
+
+
+## 我现在所在的是谁家的农场（串门时是主人的 id，否则是自己的 id）
+func my_farm() -> int:
+	return Net.visiting if Net.visiting != 0 else Net.my_id()
 
 
 func _farm_states() -> Array:
@@ -172,7 +180,11 @@ func _on_farm_action_result(msg: String, item: String, beans: int) -> void:
 	if item != "":
 		GameState.add_item(item)
 	if beans > 0:
-		GameState.add_beans(beans)
+		if GameState.help_today >= HELP_REWARDS_PER_DAY:
+			msg = "谢谢你的帮忙！（今天的帮忙奖励已经领满啦）"
+		else:
+			GameState.help_today += 1
+			GameState.add_beans(beans)
 	GameState.toast.emit(msg)
 
 
@@ -188,19 +200,37 @@ func _on_roster_changed() -> void:
 			r.position = Vector2(1200, 880) + Vector2(randf_range(-60, 60), randf_range(-30, 30))
 			ysort.add_child(r)
 			remotes[id] = r
+			var lh = Lahm.new()
+			lh.is_remote = true
+			lh.player = r
+			lh.position = r.position + Vector2(-50, 0)
+			ysort.add_child(lh)
+			r.lahm = lh
 			ui.add_chat_line("", "【系统】%s 来到了小镇" % info["name"], Color(1, 0.9, 0.4))
 		remotes[id].apply_info(info)
 	for id in remotes.keys():
 		if not Net.players.has(id) or id == me:
 			if Net.players.size() > 0:
 				ui.add_chat_line("", "【系统】%s 离开了小镇" % remotes[id].display_name, Color(1, 0.9, 0.4))
+			if is_instance_valid(remotes[id].lahm):
+				remotes[id].lahm.queue_free()
 			remotes[id].queue_free()
 			remotes.erase(id)
 
 
-func _on_peer_moved(id: int, pos: Vector2, to: Vector2, is_fishing: bool) -> void:
+func _on_peer_moved(id: int, pos: Vector2, to: Vector2, is_fishing: bool, farm: int) -> void:
 	if remotes.has(id):
 		remotes[id].net_move(pos, to, is_fishing)
+		remotes[id].farm = farm
+
+
+## 每个人的农场画在地图同一块地方：别人在“另一家”的农场里时，不在我的农场区域显示
+func _update_remote_visibility() -> void:
+	var mine := my_farm()
+	for r in remotes.values():
+		r.visible = r.farm == mine or not FARM_RECT.has_point(r.position)
+		if is_instance_valid(r.lahm):
+			r.lahm.visible = r.visible and (r.farm == mine or not FARM_RECT.has_point(r.lahm.position))
 
 
 func _on_peer_chat(id: int, text: String) -> void:
@@ -309,6 +339,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	sky.color = _sky_color(GameState.minutes / 60.0)
+	_update_remote_visibility()
 
 
 func _sky_color(h: float) -> Color:

@@ -52,6 +52,7 @@ var ui_theme: Theme
 var save_path := "user://mole_save.json"
 var player_name := ""
 var body_color := ""
+var help_today: int = 0  # 今天串门帮忙已领奖励的次数
 
 
 func _ready() -> void:
@@ -78,6 +79,7 @@ func _process(delta: float) -> void:
 	minutes += delta * DAY_MINUTES / REAL_SECONDS_PER_DAY
 	if minutes >= DAY_MINUTES:
 		minutes -= DAY_MINUTES
+		help_today = 0
 		day += 1
 		toast.emit("新的一天开始了！第 %d 天" % day)
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * 0.25)
@@ -205,7 +207,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -236,6 +238,7 @@ func load_game() -> bool:
 	minutes = float(data.get("minutes", 480.0))
 	quest = data.get("quest", {})
 	quests_done = int(data.get("quests_done", 0))
+	help_today = int(data.get("help_today", 0))
 	plots = data.get("plots", {})
 	player_name = str(data.get("player_name", "")).left(10)
 	body_color = str(data.get("body_color", ""))

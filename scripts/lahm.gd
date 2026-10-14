@@ -8,10 +8,12 @@ var t := 0.0
 var facing := 1.0
 var hearts: Array = []  # [位置, 剩余时间]
 var name_label: Label
+var is_remote := false  # 其他玩家的拉姆：只跟随、不能喂
 
 
 func _ready() -> void:
-	add_to_group("interactable")
+	if not is_remote:
+		add_to_group("interactable")
 	name_label = Label.new()
 	name_label.text = "拉姆"
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -25,7 +27,7 @@ func _ready() -> void:
 
 
 func is_hungry() -> bool:
-	return GameState.lahm_hunger < 25.0
+	return not is_remote and GameState.lahm_hunger < 25.0
 
 
 func _process(delta: float) -> void:
