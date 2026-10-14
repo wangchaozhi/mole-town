@@ -186,12 +186,14 @@ func _on_farm_action_requested(id: int, plot_id: int, action: String) -> void:
 func _on_farm_action_result(msg: String, item: String, beans: int) -> void:
 	if item != "":
 		GameState.add_item(item)
+		GameState.record("harvest", item)
 	if beans > 0:
 		if GameState.help_today >= HELP_REWARDS_PER_DAY:
 			msg = "谢谢你的帮忙！（今天的帮忙奖励已经领满啦）"
 		else:
 			GameState.help_today += 1
 			GameState.add_beans(beans)
+			GameState.record("help")
 	GameState.toast.emit(msg)
 
 

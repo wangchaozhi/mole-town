@@ -108,6 +108,7 @@ func interact(_pl) -> void:
 	elif growth >= 1.0:
 		var n := 1 + (1 if randf() < 0.35 else 0)
 		GameState.add_item(crop, n)
+		GameState.record("harvest", crop, n)
 		for i in n:
 			GameState.report("harvest", crop)
 		Sfx.play("harvest")

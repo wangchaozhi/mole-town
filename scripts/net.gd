@@ -215,6 +215,7 @@ func visit(owner: int) -> void:
 		stop_visit.rpc_id(visiting)
 	visiting = owner
 	request_farm.rpc_id(owner)
+	GameState.record("visit")
 	visit_changed.emit()
 
 

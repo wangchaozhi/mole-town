@@ -57,6 +57,11 @@ var player_name := ""
 var body_color := ""
 var is_new_player := false  # 第一次进入游戏（还没有存档）
 var help_today: int = 0  # 今天串门帮忙已领奖励的次数
+var collection: Dictionary = {}  # 物品 id -> 累计获得数量（图鉴）
+var stats: Dictionary = {}  # harvest_total / fish_total / help_total / visits
+var achievements: Array = []  # 已解锁的成就 id
+var last_signin := ""  # 上次签到的日期（现实日期）
+var signin_streak := 0
 var music_volume := 0.6
 var sfx_volume := 0.8
 var raining := false
@@ -150,6 +155,7 @@ func add_beans(n: int) -> void:
 	if n > 0:
 		Sfx.play("coin")
 	beans_changed.emit()
+	check_achievements()
 
 
 func spend_beans(n: int) -> bool:
@@ -209,6 +215,7 @@ func claim_quest() -> int:
 	var reward := int(quest["reward"])
 	add_beans(reward)
 	quests_done += 1
+	check_achievements()
 	new_quest()
 	return reward
 
@@ -220,7 +227,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -252,6 +259,17 @@ func load_game() -> bool:
 	quest = data.get("quest", {})
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
+	collection = {}
+	var col: Dictionary = data.get("collection", {})
+	for k in col:
+		collection[k] = int(col[k])
+	stats = {}
+	var st: Dictionary = data.get("stats", {})
+	for k in st:
+		stats[k] = int(st[k])
+	achievements = data.get("achievements", [])
+	last_signin = str(data.get("last_signin", ""))
+	signin_streak = int(data.get("signin_streak", 0))
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
@@ -371,9 +389,119 @@ func reset_game() -> void:
 	plots = {}
 	help_today = 0
 	offline_seconds = 0.0
+	collection = {}
+	stats = {}
+	achievements = []
 	raining = false
 	weather_timer = 60.0
 	new_quest()
 	beans_changed.emit()
 	inventory_changed.emit()
 	hat_changed.emit()
+
+
+# ---------- 图鉴 / 成就 ----------
+
+const ACHIEVEMENTS := [
+	{"id": "first_harvest", "name": "第一次收获", "desc": "收获 1 个作物", "stat": "harvest_total", "target": 1, "reward": 20},
+	{"id": "farmer", "name": "勤劳的农夫", "desc": "累计收获 50 个作物", "stat": "harvest_total", "target": 50, "reward": 150},
+	{"id": "all_crops", "name": "作物大全", "desc": "每种作物都收获过", "stat": "crop_kinds", "target": 4, "reward": 120},
+	{"id": "first_fish", "name": "初次垂钓", "desc": "钓到 1 条鱼", "stat": "fish_total", "target": 1, "reward": 20},
+	{"id": "angler", "name": "钓鱼达人", "desc": "累计钓到 30 条鱼", "stat": "fish_total", "target": 30, "reward": 150},
+	{"id": "gold_fish", "name": "金光闪闪", "desc": "钓到一条金鱼", "stat": "c:gold_fish", "target": 1, "reward": 100},
+	{"id": "all_fish", "name": "湖中宝藏", "desc": "集齐湖里能钓到的所有东西", "stat": "fish_kinds", "target": 4, "reward": 120},
+	{"id": "quests", "name": "乐乐的好帮手", "desc": "完成 10 个乐乐的任务", "stat": "quests_done", "target": 10, "reward": 200},
+	{"id": "rich", "name": "小富翁", "desc": "同时拥有 1000 摩尔豆", "stat": "beans", "target": 1000, "reward": 100},
+	{"id": "visitor", "name": "串门达人", "desc": "去好友家串门 1 次", "stat": "visits", "target": 1, "reward": 30},
+	{"id": "helper", "name": "热心邻居", "desc": "去好友农场帮忙 10 次", "stat": "help_total", "target": 10, "reward": 100},
+	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 4, "reward": 200},
+]
+
+const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
+
+signal achievement_unlocked(a: Dictionary)
+
+
+## 记录图鉴 / 统计：kind = harvest / fish / help / visit
+func record(kind: String, item: String = "", n: int = 1) -> void:
+	match kind:
+		"harvest":
+			collection[item] = int(collection.get(item, 0)) + n
+			stats["harvest_total"] = int(stats.get("harvest_total", 0)) + n
+		"fish":
+			collection[item] = int(collection.get(item, 0)) + n
+			if item != "boot":
+				stats["fish_total"] = int(stats.get("fish_total", 0)) + n
+		"help":
+			stats["help_total"] = int(stats.get("help_total", 0)) + n
+		"visit":
+			stats["visits"] = int(stats.get("visits", 0)) + n
+	check_achievements()
+
+
+func stat_value(stat: String) -> int:
+	match stat:
+		"beans":
+			return beans
+		"quests_done":
+			return quests_done
+		"hats":
+			return owned_hats.size() - 1
+		"crop_kinds":
+			var k := 0
+			for c in CROPS:
+				if int(collection.get(c, 0)) > 0:
+					k += 1
+			return k
+		"fish_kinds":
+			var k := 0
+			for f in FISH:
+				if int(collection.get(f, 0)) > 0:
+					k += 1
+			return k
+	if stat.begins_with("c:"):
+		return int(collection.get(stat.substr(2), 0))
+	return int(stats.get(stat, 0))
+
+
+func check_achievements() -> void:
+	for a in ACHIEVEMENTS:
+		if a["id"] in achievements:
+			continue
+		if stat_value(a["stat"]) >= int(a["target"]):
+			achievements.append(a["id"])
+			toast.emit("成就达成：%s！奖励 %d 摩尔豆" % [a["name"], a["reward"]])
+			Sfx.play("catch")
+			achievement_unlocked.emit(a)
+			add_beans(int(a["reward"]))
+
+
+# ---------- 每日签到（按现实日期） ----------
+
+func today() -> String:
+	return Time.get_date_string_from_system()
+
+
+func can_sign_in() -> bool:
+	return last_signin != today()
+
+
+## 今天签到的话是连续第几天（1~7 循环）
+func next_signin_day() -> int:
+	var yesterday := Time.get_date_string_from_unix_time(int(Time.get_unix_time_from_system()) - 86400)
+	var streak := signin_streak + 1 if last_signin == yesterday else 1
+	return (streak - 1) % 7 + 1
+
+
+func sign_in() -> int:
+	if not can_sign_in():
+		return 0
+	var d := next_signin_day()
+	signin_streak = signin_streak + 1 if d > 1 else 1
+	last_signin = today()
+	var reward: int = SIGNIN_REWARDS[d - 1]
+	add_beans(reward)
+	if d == 7:
+		add_item("seed_sunflower", 3)
+	save_game()
+	return reward
