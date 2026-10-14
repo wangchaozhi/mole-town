@@ -208,33 +208,66 @@ func spend_beans(n: int) -> bool:
 # ---------- 任务 ----------
 
 func new_quest() -> void:
-	if randf() < 0.65:
+	var r := randf()
+	if r < 0.4:
 		var keys: Array = CROPS.keys().filter(func(c): return is_unlocked(c))
 		var pool := mini(keys.size(), 2 + quests_done / 2)
 		var crop: String = keys[randi() % pool]
 		var need := 2 + randi() % 3
 		quest = {"kind": "harvest", "item": crop, "need": need, "have": 0,
 			"reward": int(CROPS[crop]["sell"]) * need + 20}
-	else:
+	elif r < 0.6:
 		var need := 2 + randi() % 2
 		quest = {"kind": "fish", "item": "any", "need": need, "have": 0, "reward": 30 * need}
+	elif r < 0.8:
+		# 做菜任务：只出现在食材已经解锁的菜里
+		var dishes: Array = DISHES.keys().filter(func(d): return _dish_unlocked(d))
+		var dish: String = dishes.pick_random()
+		var need := 1 + randi() % 2
+		quest = {"kind": "cook", "item": dish, "need": need, "have": 0, "reward": int(DISHES[dish]["sell"]) * need + 30}
+	else:
+		# 送货任务：把作物或鱼交给乐乐（领奖时扣掉）
+		var items: Array = CROPS.keys().filter(func(c): return is_unlocked(c)) + ["small_fish", "big_fish"]
+		var item: String = items.pick_random()
+		var need := 2 + randi() % 3
+		quest = {"kind": "deliver", "item": item, "need": need, "have": 0, "reward": roundi(sell_price(item) * need * 1.5) + 20}
 	quest_changed.emit()
 
 
 func quest_done() -> bool:
-	return not quest.is_empty() and int(quest["have"]) >= int(quest["need"])
+	return not quest.is_empty() and quest_have() >= int(quest["need"])
+
+
+## 送货任务直接看背包里有多少，其它任务看累计进度
+func quest_have() -> int:
+	if quest.get("kind", "") == "deliver":
+		return mini(count(str(quest["item"])), int(quest["need"]))
+	return int(quest.get("have", 0))
+
+
+func _dish_unlocked(d: String) -> bool:
+	for k in DISHES[d]["needs"]:
+		if CROPS.has(k) and not is_unlocked(k):
+			return false
+	return true
 
 
 func quest_text() -> String:
 	if quest.is_empty():
 		return "暂无任务"
 	var need := int(quest["need"])
-	var have := int(quest["have"])
+	var have := quest_have()
 	var desc := ""
-	if quest["kind"] == "fish":
-		desc = "钓到 %d 条鱼" % need
-	else:
-		desc = "收获 %d 个%s" % [need, item_name(str(quest["item"]))]
+	var it := item_name(str(quest["item"]))
+	match quest["kind"]:
+		"fish":
+			desc = "钓到 %d 条鱼" % need
+		"cook":
+			desc = "做 %d 份%s" % [need, it]
+		"deliver":
+			desc = "给乐乐带 %d 个%s" % [need, it]
+		_:
+			desc = "收获 %d 个%s" % [need, it]
 	var status := "（完成啦！去找乐乐领奖）" if have >= need else "（%d/%d）" % [have, need]
 	return "%s%s  奖励%d豆" % [desc, status, int(quest["reward"])]
 
@@ -251,6 +284,8 @@ func report(kind: String, item: String) -> void:
 
 func claim_quest() -> int:
 	var reward := int(quest["reward"])
+	if quest.get("kind", "") == "deliver":
+		remove_item(str(quest["item"]), int(quest["need"]))
 	add_beans(reward)
 	quests_done += 1
 	add_exp(15)
@@ -951,6 +986,7 @@ func cook(dish: String) -> bool:
 		remove_item(k, int(needs[k]))
 	add_item(dish)
 	record("cook", dish)
+	report("cook", dish)
 	add_exp(int(DISHES[dish]["exp"]))
 	return true
 

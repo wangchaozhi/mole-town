@@ -612,6 +612,7 @@ func _refresh_seeds() -> void:
 
 func _on_inventory_changed() -> void:
 	_refresh_seeds()
+	_refresh_hud()  # 送货任务的进度跟着背包变
 	if bag_panel.visible:
 		_refresh_bag()
 

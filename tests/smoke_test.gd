@@ -143,6 +143,15 @@ func _run() -> void:
 	var r := GameState.claim_quest()
 	check(GameState.beans >= b + r and not GameState.quest_done(), "领取任务奖励并刷新任务")
 
+	GameState.quest = {"kind": "deliver", "item": "corn", "need": 2, "have": 0, "reward": 50}
+	GameState.remove_item("corn", GameState.count("corn"))
+	GameState.add_item("corn", 1)
+	check(not GameState.quest_done(), "送货任务：东西不够时未完成")
+	GameState.add_item("corn", 1)
+	check(GameState.quest_done(), "送货任务：背包里够了就算完成")
+	GameState.claim_quest()
+	check(GameState.count("corn") == 0, "领奖时把东西交给乐乐")
+
 	print("[等级]")
 	GameState.add_exp(GameState.exp_for_level(3) - GameState.player_exp)
 	check(GameState.player_level == 3 and GameState.is_unlocked("pumpkin"), "升到 3 级解锁南瓜")
