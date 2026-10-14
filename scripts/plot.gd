@@ -102,6 +102,7 @@ func interact(_pl) -> void:
 			water_time = 0.0
 			picked = false
 			Sfx.play("plant")
+			GameState.add_exp(1)
 			GameState.toast.emit("种下了%s，记得浇水哦" % GameState.item_name("seed_" + seed))
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
@@ -232,6 +233,24 @@ func _draw() -> void:
 
 func _draw_ripe(c_crop: String, col: Color, leaf: Color) -> void:
 	match c_crop:
+		"corn":
+			draw_line(Vector2(0, 4), Vector2(0, -56), leaf.darkened(0.15), 4.0)
+			for k in 3:
+				var y := -10.0 - k * 14.0
+				D.ell(self, Vector2(-10 if k % 2 == 0 else 10, y), Vector2(13, 4), leaf)
+			for sx in [-1.0, 1.0]:
+				var cob := Vector2(sx * 9.0, -34)
+				D.ell(self, cob, Vector2(6, 13), col)
+				for r in 4:
+					draw_line(cob + Vector2(-5, -9 + r * 6), cob + Vector2(5, -9 + r * 6), col.darkened(0.15), 1.0)
+				draw_colored_polygon(PackedVector2Array([cob + Vector2(-7, 6), cob + Vector2(7, 6), cob + Vector2(0, 16)]), leaf.lightened(0.15))
+		"watermelon":
+			D.ell(self, Vector2(-24, -4), Vector2(12, 5), leaf)
+			D.ell(self, Vector2(24, -8), Vector2(12, 5), leaf)
+			D.ell(self, Vector2(0, -12), Vector2(28, 18), col.darkened(0.1))
+			for k in [-14.0, -5.0, 5.0, 14.0]:
+				D.ell(self, Vector2(k, -12), Vector2(3, 16), Color(0.15, 0.4, 0.15))
+			D.ell(self, Vector2(-9, -20), Vector2(9, 4), Color(1, 1, 1, 0.25))
 		"carrot":
 			for x in [-16.0, 0.0, 16.0]:
 				for k in 3:

@@ -126,7 +126,7 @@ func _find_treasure() -> void:
 		GameState.add_item("lahm_fruit")
 		GameState.toast.emit("拉姆找到了一个拉姆果！")
 	elif r < 0.7:
-		var seed: String = ["carrot", "strawberry", "pumpkin"].pick_random()
+		var seed: String = GameState.CROPS.keys().filter(func(c): return GameState.is_unlocked(c)).pick_random()
 		GameState.add_item("seed_" + seed, 2)
 		GameState.toast.emit("拉姆找到了 2 颗%s！" % GameState.item_name("seed_" + seed))
 	else:

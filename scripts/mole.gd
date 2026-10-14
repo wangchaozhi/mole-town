@@ -240,6 +240,11 @@ func _draw_hat(b: Vector2) -> void:
 				var a := TAU * i / 5.0
 				draw_circle(f + Vector2(cos(a), sin(a)) * 5.5, 4.5, Color(1, 0.55, 0.75))
 			draw_circle(f, 3.5, Color(1, 0.9, 0.3))
+		"wizard":
+			D.ell(self, b + Vector2(0, 1), Vector2(24, 5), Color(0.35, 0.2, 0.6))
+			draw_colored_polygon(PackedVector2Array([b + Vector2(-13, 0), b + Vector2(13, 0), b + Vector2(facing * 10.0, -34)]), Color(0.45, 0.25, 0.75))
+			for sp in [Vector2(-4, -8), Vector2(4, -18), Vector2(-1, -26)]:
+				draw_circle(b + sp + Vector2(facing * sp.y * -0.2, 0), 2.0, Color(1, 0.9, 0.3))
 		"crown":
 			var pts := PackedVector2Array([b + Vector2(-13, 2), b + Vector2(13, 2), b + Vector2(14, -14),
 				b + Vector2(7, -6), b + Vector2(0, -17), b + Vector2(-7, -6), b + Vector2(-14, -14)])

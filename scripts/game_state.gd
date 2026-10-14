@@ -15,10 +15,12 @@ const DAY_MINUTES := 1440.0
 const REAL_SECONDS_PER_DAY := 300.0  # 现实 5 分钟 = 游戏 1 天
 
 const CROPS := {
-	"carrot": {"name": "萝卜", "seed_price": 5, "sell": 12, "grow_time": 25.0, "color": Color(1.0, 0.55, 0.15)},
-	"strawberry": {"name": "草莓", "seed_price": 12, "sell": 30, "grow_time": 45.0, "color": Color(0.95, 0.2, 0.3)},
-	"pumpkin": {"name": "南瓜", "seed_price": 25, "sell": 70, "grow_time": 80.0, "color": Color(1.0, 0.6, 0.1)},
-	"sunflower": {"name": "向日葵", "seed_price": 40, "sell": 120, "grow_time": 120.0, "color": Color(1.0, 0.85, 0.1)},
+	"carrot": {"name": "萝卜", "seed_price": 5, "sell": 12, "grow_time": 25.0, "level": 1, "exp": 2, "color": Color(1.0, 0.55, 0.15)},
+	"strawberry": {"name": "草莓", "seed_price": 12, "sell": 30, "grow_time": 45.0, "level": 1, "exp": 3, "color": Color(0.95, 0.2, 0.3)},
+	"corn": {"name": "玉米", "seed_price": 18, "sell": 45, "grow_time": 60.0, "level": 2, "exp": 4, "color": Color(1.0, 0.85, 0.3)},
+	"pumpkin": {"name": "南瓜", "seed_price": 25, "sell": 70, "grow_time": 80.0, "level": 3, "exp": 6, "color": Color(1.0, 0.6, 0.1)},
+	"sunflower": {"name": "向日葵", "seed_price": 40, "sell": 120, "grow_time": 120.0, "level": 5, "exp": 9, "color": Color(1.0, 0.85, 0.1)},
+	"watermelon": {"name": "西瓜", "seed_price": 60, "sell": 180, "grow_time": 150.0, "level": 7, "exp": 14, "color": Color(0.3, 0.68, 0.3)},
 }
 
 const FISH := {
@@ -33,7 +35,8 @@ const HATS := {
 	"red_cap": {"name": "红色小帽", "price": 80},
 	"straw": {"name": "草帽", "price": 120},
 	"flower": {"name": "小花发卡", "price": 150},
-	"crown": {"name": "小王冠", "price": 500},
+	"crown": {"name": "小王冠", "price": 500, "level": 6},
+	"wizard": {"name": "魔法帽", "price": 800, "level": 8},
 }
 
 const LAHM_FRUIT_PRICE := 15
@@ -45,6 +48,8 @@ var hat: String = "none"
 var owned_hats: Array = ["none"]
 var lahm_hunger: float = 80.0
 var lahm_exp: int = 0
+var player_exp: int = 0
+var player_level: int = 1
 var lahm_level: int = 1
 var day: int = 1
 var minutes: float = 480.0
@@ -173,7 +178,7 @@ func spend_beans(n: int) -> bool:
 
 func new_quest() -> void:
 	if randf() < 0.65:
-		var keys: Array = CROPS.keys()
+		var keys: Array = CROPS.keys().filter(func(c): return is_unlocked(c))
 		var pool := mini(keys.size(), 2 + quests_done / 2)
 		var crop: String = keys[randi() % pool]
 		var need := 2 + randi() % 3
@@ -217,6 +222,7 @@ func claim_quest() -> int:
 	var reward := int(quest["reward"])
 	add_beans(reward)
 	quests_done += 1
+	add_exp(15)
 	check_achievements()
 	new_quest()
 	return reward
@@ -228,7 +234,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "lahm_level": lahm_level,
+		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
@@ -257,6 +263,8 @@ func load_game() -> bool:
 	owned_hats = data.get("owned_hats", ["none"])
 	lahm_hunger = float(data.get("lahm_hunger", 80.0))
 	lahm_exp = int(data.get("lahm_exp", 0))
+	player_exp = int(data.get("player_exp", 0))
+	player_level = clampi(int(data.get("player_level", 1)), 1, MAX_LEVEL)
 	lahm_level = clampi(int(data.get("lahm_level", 1)), 1, LAHM_LEVELS.size())
 	day = int(data.get("day", 1))
 	minutes = float(data.get("minutes", 480.0))
@@ -389,6 +397,8 @@ func reset_game() -> void:
 	lahm_hunger = 80.0
 	lahm_exp = 0
 	lahm_level = 1
+	player_exp = 0
+	player_level = 1
 	day = 1
 	minutes = 480.0
 	quests_done = 0
@@ -411,7 +421,7 @@ func reset_game() -> void:
 const ACHIEVEMENTS := [
 	{"id": "first_harvest", "name": "第一次收获", "desc": "收获 1 个作物", "stat": "harvest_total", "target": 1, "reward": 20},
 	{"id": "farmer", "name": "勤劳的农夫", "desc": "累计收获 50 个作物", "stat": "harvest_total", "target": 50, "reward": 150},
-	{"id": "all_crops", "name": "作物大全", "desc": "每种作物都收获过", "stat": "crop_kinds", "target": 4, "reward": 120},
+	{"id": "all_crops", "name": "作物大全", "desc": "每种作物都收获过", "stat": "crop_kinds", "target": 6, "reward": 120},
 	{"id": "first_fish", "name": "初次垂钓", "desc": "钓到 1 条鱼", "stat": "fish_total", "target": 1, "reward": 20},
 	{"id": "angler", "name": "钓鱼达人", "desc": "累计钓到 30 条鱼", "stat": "fish_total", "target": 30, "reward": 150},
 	{"id": "gold_fish", "name": "金光闪闪", "desc": "钓到一条金鱼", "stat": "c:gold_fish", "target": 1, "reward": 100},
@@ -420,8 +430,9 @@ const ACHIEVEMENTS := [
 	{"id": "rich", "name": "小富翁", "desc": "同时拥有 1000 摩尔豆", "stat": "beans", "target": 1000, "reward": 100},
 	{"id": "visitor", "name": "串门达人", "desc": "去好友家串门 1 次", "stat": "visits", "target": 1, "reward": 30},
 	{"id": "helper", "name": "热心邻居", "desc": "去好友农场帮忙 10 次", "stat": "help_total", "target": 10, "reward": 100},
-	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 4, "reward": 200},
+	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 5, "reward": 200},
 	{"id": "lahm_friend", "name": "拉姆的好朋友", "desc": "把拉姆培养到 5 级", "stat": "lahm_level", "target": 5, "reward": 300},
+	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
 ]
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
@@ -435,14 +446,19 @@ func record(kind: String, item: String = "", n: int = 1) -> void:
 		"harvest":
 			collection[item] = int(collection.get(item, 0)) + n
 			stats["harvest_total"] = int(stats.get("harvest_total", 0)) + n
+			if CROPS.has(item):
+				add_exp(int(CROPS[item]["exp"]) * n)
 		"fish":
 			collection[item] = int(collection.get(item, 0)) + n
 			if item != "boot":
 				stats["fish_total"] = int(stats.get("fish_total", 0)) + n
+			add_exp({"gold_fish": 10, "big_fish": 5, "small_fish": 3}.get(item, 1))
 		"help":
 			stats["help_total"] = int(stats.get("help_total", 0)) + n
+			add_exp(2)
 		"visit":
 			stats["visits"] = int(stats.get("visits", 0)) + n
+			add_exp(5)
 	check_achievements()
 
 
@@ -454,6 +470,8 @@ func stat_value(stat: String) -> int:
 			return quests_done
 		"lahm_level":
 			return lahm_level
+		"player_level":
+			return player_level
 		"hats":
 			return owned_hats.size() - 1
 		"crop_kinds":
@@ -508,6 +526,7 @@ func sign_in() -> int:
 	var d := next_signin_day()
 	signin_streak = signin_streak + 1 if d > 1 else 1
 	last_signin = today()
+	add_exp(5)
 	var reward: int = SIGNIN_REWARDS[d - 1]
 	add_beans(reward)
 	if d == 7:
@@ -537,3 +556,47 @@ func lahm_exp_to_next() -> int:
 	if lahm_level >= LAHM_LEVELS.size():
 		return -1
 	return LAHM_LEVELS[lahm_level] - lahm_exp
+
+
+# ---------- 玩家等级 ----------
+
+const MAX_LEVEL := 10
+
+signal level_changed
+
+
+## 升到第 level 级需要的累计经验：Lv2=50, Lv3=150, Lv4=300 ……
+func exp_for_level(level: int) -> int:
+	return 25 * level * (level - 1)
+
+
+func add_exp(n: int) -> void:
+	if player_level >= MAX_LEVEL:
+		return
+	player_exp += n
+	var ups := false
+	while player_level < MAX_LEVEL and player_exp >= exp_for_level(player_level + 1):
+		player_level += 1
+		ups = true
+		var unlocks := PackedStringArray()
+		for c in CROPS:
+			if int(CROPS[c]["level"]) == player_level:
+				unlocks.append(str(CROPS[c]["name"]) + "种子")
+		for h in HATS:
+			if int(HATS[h].get("level", 1)) == player_level:
+				unlocks.append(str(HATS[h]["name"]))
+		var extra := "，解锁了" + "、".join(unlocks) if unlocks.size() > 0 else ""
+		toast.emit("升级啦！你现在是 Lv%d%s" % [player_level, extra])
+	if ups:
+		Sfx.play("catch")
+		Net.send_info()
+		check_achievements()
+	level_changed.emit()
+
+
+func is_unlocked(crop: String) -> bool:
+	return player_level >= int(CROPS[crop]["level"])
+
+
+func hat_unlocked(id: String) -> bool:
+	return player_level >= int(HATS[id].get("level", 1))

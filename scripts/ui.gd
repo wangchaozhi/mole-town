@@ -24,6 +24,8 @@ var time_label: Label
 var quest_label: Label
 var hunger_bar: ProgressBar
 var lahm_info: Label
+var level_label: Label
+var exp_bar: ProgressBar
 var seed_buttons := {}
 var toast_label: Label
 var toast_timer := 0.0
@@ -106,6 +108,7 @@ func _ready() -> void:
 	GameState.quest_changed.connect(_refresh_hud)
 	GameState.inventory_changed.connect(_on_inventory_changed)
 	GameState.toast.connect(show_toast)
+	GameState.level_changed.connect(_refresh_seeds)
 	_refresh_hud()
 	_refresh_seeds()
 	help_panel.visible = false
@@ -177,6 +180,15 @@ func _build_hud() -> void:
 	beans_label = _label("", 20)
 	time_label = _label("", 15)
 	v.add_child(beans_label)
+	var lvrow := HBoxContainer.new()
+	level_label = _label("", 15)
+	lvrow.add_child(level_label)
+	exp_bar = ProgressBar.new()
+	exp_bar.custom_minimum_size = Vector2(130, 10)
+	exp_bar.show_percentage = false
+	exp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lvrow.add_child(exp_bar)
+	v.add_child(lvrow)
 	v.add_child(time_label)
 	var hb := HBoxContainer.new()
 	hb.add_child(_label("拉姆饱食度", 14))
@@ -212,8 +224,8 @@ func _build_hud() -> void:
 
 func _build_seed_bar() -> void:
 	var p := _panel()
-	_place(p, [0.5, 1, 0.5, 1], [0, -12, 0, -12], true)
-	p.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_place(p, [1, 1, 1, 1], [-12, -12, -12, -12], true)
+	p.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	p.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var hb := HBoxContainer.new()
 	p.add_child(hb)
@@ -574,7 +586,12 @@ func _refresh_hud() -> void:
 func _refresh_seeds() -> void:
 	for id in seed_buttons:
 		var b: Button = seed_buttons[id]
-		b.text = "%s ×%d" % [GameState.CROPS[id]["name"], GameState.count("seed_" + id)]
+		if GameState.is_unlocked(id) or GameState.count("seed_" + id) > 0:
+			b.text = "%s ×%d" % [GameState.CROPS[id]["name"], GameState.count("seed_" + id)]
+			b.disabled = false
+		else:
+			b.text = "%s Lv%d" % [GameState.CROPS[id]["name"], int(GameState.CROPS[id]["level"])]
+			b.disabled = true
 		b.set_pressed_no_signal(id == GameState.selected_seed)
 
 
@@ -610,6 +627,15 @@ func show_toast(text: String) -> void:
 func _process(delta: float) -> void:
 	time_label.text = GameState.time_text()
 	hunger_bar.value = GameState.lahm_hunger
+	var lv := GameState.player_level
+	if lv >= GameState.MAX_LEVEL:
+		level_label.text = "Lv%d（满级）" % lv
+		exp_bar.value = 100
+	else:
+		var lo := GameState.exp_for_level(lv)
+		var hi := GameState.exp_for_level(lv + 1)
+		level_label.text = "Lv%d  经验 %d/%d " % [lv, GameState.player_exp - lo, hi - lo]
+		exp_bar.value = 100.0 * (GameState.player_exp - lo) / (hi - lo)
 	var nx := GameState.lahm_exp_to_next()
 	lahm_info.text = " Lv%d · %s" % [GameState.lahm_level, "满级" if nx < 0 else "还差%d" % nx]
 	if toast_timer > 0.0:
@@ -812,8 +838,11 @@ func _populate_shop() -> void:
 			for id in GameState.CROPS:
 				var c: Dictionary = GameState.CROPS[id]
 				var price: int = c["seed_price"]
-				_shop_row("%s种子   %d豆\n约%d秒成熟 · 售价%d豆" % [c["name"], price, int(c["grow_time"]), c["sell"]],
-					[["买1个", _buy.bind("seed_" + id, price, 1)], ["买5个", _buy.bind("seed_" + id, price, 5)]])
+				var info := "%s种子   %d豆\n约%d秒成熟 · 售价%d豆" % [c["name"], price, int(c["grow_time"]), c["sell"]]
+				if GameState.is_unlocked(id):
+					_shop_row(info, [["买1个", _buy.bind("seed_" + id, price, 1)], ["买5个", _buy.bind("seed_" + id, price, 5)]])
+				else:
+					_shop_row(info, [["Lv%d 解锁" % int(c["level"]), _noop, true]])
 		"sell":
 			var any := false
 			for id in GameState.inventory.keys():
@@ -834,6 +863,8 @@ func _populate_shop() -> void:
 					_shop_row(label, [["穿戴中", _noop, true]])
 				elif owned:
 					_shop_row(label, [["穿戴", _wear.bind(id)]])
+				elif not GameState.hat_unlocked(id):
+					_shop_row(label, [["Lv%d 解锁" % int(h.get("level", 1)), _noop, true]])
 				else:
 					_shop_row(label, [["购买并穿戴", _wear.bind(id)]])
 		"lahm":
@@ -1254,11 +1285,11 @@ func _refresh_collection() -> void:
 
 func _item_row(ids: Array) -> HBoxContainer:
 	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 18)
+	hb.add_theme_constant_override("separation", 6)
 	for id in ids:
 		var n := int(GameState.collection.get(id, 0))
 		var card := VBoxContainer.new()
-		card.custom_minimum_size = Vector2(130, 0)
+		card.custom_minimum_size = Vector2(96, 0)
 		var icon := Control.new()
 		icon.custom_minimum_size = Vector2(56, 56)
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -1284,6 +1315,16 @@ func _draw_item(c: Control, id: String, known: bool) -> void:
 			"small_fish": Color(0.55, 0.72, 0.88), "big_fish": Color(0.3, 0.5, 0.82),
 			"gold_fish": Color(1.0, 0.75, 0.15), "boot": Color(0.5, 0.35, 0.25)}[id]
 	match id:
+		"corn":
+			D.ell(c, m + Vector2(0, -2), Vector2(9, 18), col)
+			for r in 5:
+				c.draw_line(m + Vector2(-7, -12 + r * 6), m + Vector2(7, -12 + r * 6), col.darkened(0.2), 1.0)
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(-12, 18), m + Vector2(-2, 2), m + Vector2(0, 20)]), leaf)
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(12, 18), m + Vector2(2, 2), m + Vector2(0, 20)]), leaf)
+		"watermelon":
+			D.ell(c, m, Vector2(20, 15), col.darkened(0.1))
+			for k in [-10.0, -3.0, 4.0, 11.0]:
+				D.ell(c, m + Vector2(k, 0), Vector2(2.5, 13), col.darkened(0.45) if known else gray.darkened(0.25))
 		"carrot":
 			for k in 3:
 				c.draw_line(m + Vector2(0, -8), m + Vector2(-6 + k * 6, -20), leaf, 3.0)
