@@ -154,6 +154,8 @@ func item_name(id: String) -> String:
 		return FISH[id]["name"]
 	if id == "lahm_fruit":
 		return "拉姆果"
+	if DISHES.has(id):
+		return DISHES[id]["name"]
 	if id.begins_with("furn_") and FURNITURE.has(id.substr(5)):
 		return FURNITURE[id.substr(5)]["name"]
 	return id
@@ -165,6 +167,8 @@ func sell_price(id: String) -> int:
 		return maxi(1, roundi(int(CROPS[id]["sell"]) * price_mult(id) * fest))
 	if FISH.has(id):
 		return FISH[id]["sell"]
+	if DISHES.has(id):
+		return DISHES[id]["sell"]
 	return 0
 
 
@@ -493,6 +497,8 @@ const ACHIEVEMENTS := [
 	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
 	{"id": "popular", "name": "小镇人气王", "desc": "和一位 NPC 成为好朋友（好感 100）", "stat": "max_affinity", "target": 100, "reward": 200},
 	{"id": "catcher", "name": "接果子高手", "desc": "在接果子小游戏里拿到 40 分", "stat": "best_catch", "target": 40, "reward": 150},
+	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
+	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
@@ -519,6 +525,9 @@ func record(kind: String, item: String = "", n: int = 1) -> void:
 		"visit":
 			stats["visits"] = int(stats.get("visits", 0)) + n
 			add_exp(5)
+		"cook":
+			collection[item] = int(collection.get(item, 0)) + n
+			stats["cook_total"] = int(stats.get("cook_total", 0)) + n
 	check_achievements()
 
 
@@ -545,6 +554,12 @@ func stat_value(stat: String) -> int:
 			var k := 0
 			for c in CROPS:
 				if int(collection.get(c, 0)) > 0:
+					k += 1
+			return k
+		"dish_kinds":
+			var k := 0
+			for d in DISHES:
+				if int(collection.get(d, 0)) > 0:
 					k += 1
 			return k
 		"fish_kinds":
@@ -705,7 +720,7 @@ func seed_price(crop: String) -> int:
 
 ## 可以送给好友的物品（也用来校验收到的礼物）
 func is_giftable(id: String) -> bool:
-	if CROPS.has(id) or FISH.has(id) or id == "lahm_fruit":
+	if CROPS.has(id) or FISH.has(id) or DISHES.has(id) or id == "lahm_fruit":
 		return true
 	if id.begins_with("seed_"):
 		return CROPS.has(id.substr(5))
@@ -717,12 +732,12 @@ func is_giftable(id: String) -> bool:
 # ---------- NPC 好感度 ----------
 
 const NPC_INFO := {
-	"乐乐": {"likes": ["strawberry", "sunflower"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
-	"店长豆豆": {"likes": ["gold_fish", "watermelon"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
-	"小黄": {"likes": ["corn", "carrot"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
-	"嘟嘟": {"likes": ["big_fish", "small_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
-	"米米": {"likes": ["pumpkin", "strawberry"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
-	"阿呆": {"likes": ["watermelon", "gold_fish"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
+	"乐乐": {"likes": ["strawberry", "sunflower", "strawberry_cake"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
+	"店长豆豆": {"likes": ["gold_fish", "watermelon", "carrot_soup"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
+	"小黄": {"likes": ["corn", "carrot", "grilled_corn"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
+	"嘟嘟": {"likes": ["big_fish", "small_fish", "fish_soup"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
+	"米米": {"likes": ["pumpkin", "strawberry", "pumpkin_pie"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
+	"阿呆": {"likes": ["watermelon", "gold_fish", "watermelon_smoothie"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
 }
 
 var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
@@ -900,3 +915,36 @@ func season_growth(crop: String) -> float:
 	if season() == 3:
 		return 0.7
 	return 1.0
+
+
+# ---------- 烹饪 ----------
+
+const DISHES := {
+	"carrot_soup": {"name": "萝卜汤", "needs": {"carrot": 2}, "sell": 35, "exp": 4, "color": Color(1.0, 0.6, 0.25)},
+	"fish_soup": {"name": "鲜鱼汤", "needs": {"big_fish": 1, "carrot": 1}, "sell": 48, "exp": 5, "color": Color(0.95, 0.92, 0.82)},
+	"strawberry_cake": {"name": "草莓蛋糕", "needs": {"strawberry": 2, "corn": 1}, "sell": 140, "exp": 8, "color": Color(1.0, 0.55, 0.65)},
+	"grilled_corn": {"name": "烤玉米", "needs": {"corn": 2}, "sell": 110, "exp": 6, "color": Color(0.95, 0.75, 0.25)},
+	"pumpkin_pie": {"name": "南瓜派", "needs": {"pumpkin": 1, "strawberry": 1}, "sell": 130, "exp": 8, "color": Color(0.95, 0.55, 0.15)},
+	"watermelon_smoothie": {"name": "西瓜冰沙", "needs": {"watermelon": 1, "strawberry": 1}, "sell": 250, "exp": 12, "color": Color(1.0, 0.4, 0.45)},
+	"lahm_meal": {"name": "拉姆特制饭", "needs": {"carrot": 1, "small_fish": 1}, "sell": 30, "exp": 5, "color": Color(1.0, 0.75, 0.85)},
+}
+
+
+func can_cook(dish: String) -> bool:
+	var needs: Dictionary = DISHES[dish]["needs"]
+	for k in needs:
+		if count(k) < int(needs[k]):
+			return false
+	return true
+
+
+func cook(dish: String) -> bool:
+	if not DISHES.has(dish) or not can_cook(dish):
+		return false
+	var needs: Dictionary = DISHES[dish]["needs"]
+	for k in needs:
+		remove_item(k, int(needs[k]))
+	add_item(dish)
+	record("cook", dish)
+	add_exp(int(DISHES[dish]["exp"]))
+	return true

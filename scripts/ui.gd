@@ -55,6 +55,7 @@ var profile  # ui_profile.gd：设置、表情、捏脸
 var progress  # ui_progress.gd：图鉴、成就、签到
 var minimap_panel: PanelContainer
 var act  # ui_activities.gd：送礼物、小游戏、留言板
+var kitchen  # ui_kitchen.gd：烹饪
 var visit_bar: PanelContainer
 var visit_label: Label
 
@@ -100,6 +101,10 @@ func _ready() -> void:
 	act.ui = self
 	add_child(act)
 	act.build()
+	kitchen = preload("res://scripts/ui_kitchen.gd").new()
+	kitchen.ui = self
+	add_child(kitchen)
+	kitchen.build()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -521,6 +526,7 @@ func _build_help() -> void:
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
+		+ "• 小厨房（广场左边）：用作物和鱼做菜，菜卖得更贵，也是拉姆和 NPC 最爱的礼物\n" \
 		+ "• 留言板（广场右边）：贴一张留言，联机时所有人都能看到\n" \
 		+ "• NPC 好感：每个 NPC 每天可以送一次礼物，送他们喜欢的东西好感涨得快，好感到 20 / 50 / 100 会收到回礼\n" \
 		+ "• 我的小院（农场左边）：在商店「家具」页买家具，背包里点「摆放」装扮小院，点家具可以移动或收起\n" \
@@ -665,6 +671,7 @@ func _close_all() -> void:
 	profile.close()
 	progress.close()
 	act.close()
+	kitchen.close()
 	if fishing:
 		_stop_fishing()
 
@@ -1001,3 +1008,7 @@ func toggle_emotes() -> void:
 
 func do_emote(kind: String) -> void:
 	profile.do_emote(kind)
+
+
+func open_kitchen() -> void:
+	kitchen.open()

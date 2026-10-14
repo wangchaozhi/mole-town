@@ -227,6 +227,17 @@ func _run() -> void:
 	check(not lele.sleeping, "早上乐乐醒来")
 	GameState.minutes = minutes0
 
+	print("[烹饪]")
+	GameState.add_item("carrot", 2)
+	var soup0 := GameState.count("carrot_soup")
+	check(GameState.can_cook("carrot_soup") and GameState.cook("carrot_soup"), "用 2 个萝卜做萝卜汤")
+	check(GameState.count("carrot_soup") == soup0 + 1 and GameState.sell_price("carrot_soup") > 0, "萝卜汤进背包且可以卖")
+	GameState.remove_item("watermelon", GameState.count("watermelon"))
+	check(not GameState.cook("watermelon_smoothie"), "食材不够时不能做")
+	ui.open_kitchen()
+	check(ui.kitchen.panel.visible and ui.kitchen.list.get_child_count() > 0, "打开小厨房")
+	ui._close_all()
+
 	print("[界面]")
 	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
 	ui.open_shop()

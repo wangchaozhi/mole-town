@@ -53,9 +53,11 @@ func _refresh_collection() -> void:
 	collection_body.add_child(_item_row(GameState.CROPS.keys()))
 	collection_body.add_child(ui._label("钓鱼湖", 18))
 	collection_body.add_child(_item_row(GameState.FISH.keys()))
+	collection_body.add_child(ui._label("料理", 18))
+	collection_body.add_child(_item_row(GameState.DISHES.keys()))
 	collection_body.add_child(ui._label("成就（%d/%d）" % [GameState.achievements.size(), GameState.ACHIEVEMENTS.size()], 18))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(620, 190)
+	scroll.custom_minimum_size = Vector2(620, 150)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -104,9 +106,18 @@ func _draw_item(c: Control, id: String, known: bool) -> void:
 	var leaf := Color(0.3, 0.68, 0.25) if known else gray.darkened(0.1)
 	var col := gray
 	if known:
-		col = GameState.CROPS[id]["color"] if GameState.CROPS.has(id) else {
-			"small_fish": Color(0.55, 0.72, 0.88), "big_fish": Color(0.3, 0.5, 0.82),
-			"gold_fish": Color(1.0, 0.75, 0.15), "boot": Color(0.5, 0.35, 0.25)}[id]
+		if GameState.CROPS.has(id):
+			col = GameState.CROPS[id]["color"]
+		elif GameState.DISHES.has(id):
+			col = GameState.DISHES[id]["color"]
+		else:
+			col = {"small_fish": Color(0.55, 0.72, 0.88), "big_fish": Color(0.3, 0.5, 0.82),
+				"gold_fish": Color(1.0, 0.75, 0.15), "boot": Color(0.5, 0.35, 0.25)}[id]
+	if GameState.DISHES.has(id):
+		_draw_dish(c, m, id, col, known)
+		if not known:
+			D.text(c, m + Vector2(0, 2), "?", 22, Color(1, 1, 1))
+		return
 	match id:
 		"corn":
 			D.ell(c, m + Vector2(0, -2), Vector2(9, 18), col)
@@ -232,3 +243,36 @@ func _do_signin() -> void:
 	_refresh_signin()
 
 
+
+
+## 料理图标：碗装的汤 / 蛋糕 / 烤玉米 / 派 / 冰沙
+func _draw_dish(c: Control, m: Vector2, id: String, col: Color, known: bool) -> void:
+	var D := preload("res://scripts/draw_util.gd")
+	var white := Color(0.97, 0.97, 1.0) if known else Color(0.7, 0.7, 0.7)
+	match id:
+		"strawberry_cake":
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(-16, 10), m + Vector2(16, 10), m + Vector2(16, -4), m + Vector2(-16, -4)]), Color(1, 0.92, 0.8) if known else white)
+			c.draw_rect(Rect2(m + Vector2(-16, -10), Vector2(32, 7)), col)
+			c.draw_circle(m + Vector2(0, -14), 5.0, Color(0.9, 0.15, 0.25) if known else col.darkened(0.2))
+		"grilled_corn":
+			c.draw_line(m + Vector2(0, 8), m + Vector2(0, 22), Color(0.6, 0.45, 0.3), 3.0)
+			D.ell(c, m + Vector2(0, -4), Vector2(9, 16), col)
+			for r in 4:
+				c.draw_line(m + Vector2(-7, -14 + r * 6), m + Vector2(7, -14 + r * 6), col.darkened(0.35), 1.5)
+		"pumpkin_pie":
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(-18, 10), m + Vector2(18, 10), m + Vector2(0, -16)]), Color(0.85, 0.6, 0.35) if known else white)
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(-13, 6), m + Vector2(13, 6), m + Vector2(0, -10)]), col)
+		"watermelon_smoothie":
+			c.draw_colored_polygon(PackedVector2Array([m + Vector2(-11, -12), m + Vector2(11, -12), m + Vector2(8, 16), m + Vector2(-8, 16)]), col)
+			c.draw_line(m + Vector2(4, -12), m + Vector2(10, -22), Color(0.3, 0.7, 0.4), 2.5)
+			D.ell(c, m + Vector2(0, -12), Vector2(11, 3), white)
+		_:
+			# 汤：碗 + 汤面
+			D.ell(c, m + Vector2(0, -2), Vector2(18, 6), col)
+			var bowl := PackedVector2Array()
+			for i in 13:
+				var a := PI * i / 12.0
+				bowl.append(m + Vector2(cos(a) * 18, -2 + sin(a) * 16))
+			c.draw_colored_polygon(bowl, white)
+			if id == "lahm_meal":
+				D.heart(c, m + Vector2(0, -8), 5.0, Color(1, 0.4, 0.55) if known else col)

@@ -158,6 +158,16 @@ func interact(_pl) -> void:
 		_burst()
 		Sfx.play("happy")
 		return
+	for d in ["lahm_meal"] + GameState.DISHES.keys():  # 优先吃拉姆特制饭
+		if GameState.count(d) > 0:
+			GameState.remove_item(d)
+			var special: bool = d == "lahm_meal"
+			GameState.lahm_hunger = minf(100.0, GameState.lahm_hunger + (100.0 if special else 50.0))
+			GameState.add_lahm_exp(20 if special else 8)
+			GameState.toast.emit("拉姆吃了%s，太好吃啦！亲密度 +%d" % [GameState.item_name(d), 20 if special else 8])
+			_burst()
+			Sfx.play("happy")
+			return
 	for c in GameState.CROPS:
 		if GameState.count(c) > 0:
 			GameState.remove_item(c)
