@@ -5,6 +5,9 @@ extends CanvasLayer
 
 const LostLahm = preload("res://scripts/lost_lahm.gd")
 const Firefly = preload("res://scripts/firefly.gd")
+const LeafPile = preload("res://scripts/leaf_pile.gd")
+const LEAF_SPOTS := [Vector2(480, 580), Vector2(860, 420), Vector2(1560, 660), Vector2(2050, 560), Vector2(300, 1000),
+	Vector2(1530, 990), Vector2(2200, 1180), Vector2(760, 900), Vector2(1950, 380), Vector2(200, 480)]
 const FIREFLY_SPOTS := [Vector2(240, 860), Vector2(700, 1150), Vector2(330, 1240), Vector2(150, 600), Vector2(420, 380),
 	Vector2(2250, 900), Vector2(2200, 450), Vector2(900, 330), Vector2(1980, 1300), Vector2(560, 700)]
 const MAX_FIREFLIES := 8
@@ -26,6 +29,8 @@ var firefly_timer := 2.0
 func _ready() -> void:
 	layer = 2
 	last_hour = int(GameState.minutes / 60.0)  # 进游戏的那一刻不算“整点到了”，避免一开局就触发事件
+	if last_hour >= 6 and last_hour < 18:
+		spawn_leaf_piles.call_deferred()  # 秋天白天进游戏也能看到落叶堆
 	canvas = Node2D.new()
 	canvas.draw.connect(_draw_sky)
 	add_child(canvas)
@@ -82,10 +87,31 @@ func _hourly(h: int) -> void:
 		start_shower()
 	if h == 8 and randf() < 0.4 and Net.visiting == 0:
 		spawn_lost_lahm()
+	if h >= 6 and h < 18:
+		spawn_leaf_piles()
 	if h == 18:
 		for l in get_tree().get_nodes_in_group("lost_lahm"):
 			if not l.following:
 				l.queue_free()  # 天黑前小拉姆自己找到家了
+
+
+## 秋天每天早上（或者白天第一次进游戏时）在小镇里撒 4 堆落叶，季节过了就清掉
+func spawn_leaf_piles() -> void:
+	if main == null:
+		return
+	if GameState.season() != 2:
+		for lp in get_tree().get_nodes_in_group("leaf_piles"):
+			lp.queue_free()
+		return
+	if GameState.leaf_day == GameState.day or Net.visiting != 0:
+		return
+	GameState.leaf_day = GameState.day
+	var spots := LEAF_SPOTS.duplicate()
+	spots.shuffle()
+	for i in 4:
+		var lp = LeafPile.new()
+		lp.position = spots[i]
+		main.ysort.add_child(lp)
 
 
 func start_shower() -> void:

@@ -82,6 +82,7 @@ var lahm_exp: int = 0
 var player_exp: int = 0
 var player_level: int = 1
 var lahm_level: int = 1
+var leaf_day: int = -1  # 哪一天已经撒过落叶堆
 var lahm_hide_day: int = -1  # 今天是否已经和拉姆玩过捉迷藏
 var day: int = 1
 var minutes: float = 480.0

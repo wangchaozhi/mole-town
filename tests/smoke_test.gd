@@ -445,6 +445,17 @@ func _run() -> void:
 	GameState.fish_records.erase("big_fish")
 	check(not GameState.record_fish_size("big_fish", 40) and GameState.record_fish_size("big_fish", 45) \
 		and not GameState.record_fish_size("big_fish", 41) and GameState.fish_records["big_fish"] == 45, "鱼的尺寸纪录")
+	var leaf_day0 := GameState.day
+	GameState.day = 16  # 秋天
+	GameState.leaf_day = -1
+	main.events.spawn_leaf_piles()
+	var piles := get_tree().get_nodes_in_group("leaf_piles")
+	check(piles.size() == 4, "秋天早上出现 4 堆落叶")
+	var lb0 := int(GameState.stats.get("leaf_piles", 0))
+	piles[0].interact(p)
+	check(int(GameState.stats["leaf_piles"]) == lb0 + 1 and not piles[0].is_in_group("interactable"), "翻落叶堆找到东西")
+	GameState.day = leaf_day0
+	main.events.spawn_leaf_piles()  # 不是秋天了：清掉
 	GameState.stats["fireflies"] = 9
 	var ffly = preload("res://scripts/firefly.gd").new()
 	main.ysort.add_child(ffly)
