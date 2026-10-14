@@ -13,6 +13,7 @@ var picked := false  # 成熟后是否已被来串门的好友摘过
 var t := 0.0
 var remote = null  # 串门时：好友这块地的状态 Dictionary
 var greenhouse := false  # 温室里的地块
+var _was_busy := true
 
 
 func _ready() -> void:
@@ -77,7 +78,11 @@ func _process(delta: float) -> void:
 		_advance(delta)
 		if not greenhouse and randf() < delta * 0.004:
 			bug = true
-	queue_redraw()
+	# 空地、也没在显示好友的地时不用每帧重画（播种 / 收获时会重画一次）
+	var busy := crop != "" or remote != null
+	if busy or _was_busy:
+		queue_redraw()
+	_was_busy = busy
 
 
 func hit_test(p: Vector2) -> bool:

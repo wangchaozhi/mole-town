@@ -31,7 +31,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
-	queue_redraw()
+	var m = get_tree().current_scene
+	if m != null and m.get("inside") == true and m.get("room") == "castle":
+		queue_redraw()  # 只在玩家在大厅里时重画火把动画
 
 
 func _draw() -> void:

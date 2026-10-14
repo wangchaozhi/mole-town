@@ -46,9 +46,11 @@ func _draw() -> void:
 	var grass: Color = GRASS[s]
 	draw_rect(Rect2(-400, -400, W + 800, H + 800), grass)
 	var dark := grass.darkened(0.15) if s != 3 else Color(0.78, 0.84, 0.9)
+	# 900 丛草合成一次绘制调用
+	var lines := PackedVector2Array()
 	for p in tufts:
-		draw_line(p, p + Vector2(-3, -7), dark, 2.0)
-		draw_line(p + Vector2(4, 0), p + Vector2(6, -8), dark, 2.0)
+		lines.append_array([p, p + Vector2(-3, -7), p + Vector2(4, 0), p + Vector2(6, -8)])
+	draw_multiline(lines, dark, 2.0)
 	# 花：春天最多，夏天一些，秋天是落叶，冬天没有
 	var count: int = [flowers.size(), flowers.size() / 2, flowers.size() / 2, 0][s]
 	for i in count:

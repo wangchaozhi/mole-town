@@ -29,7 +29,9 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	light.enabled = GameState.is_night()
-	queue_redraw()
+	var m = get_tree().current_scene
+	if m != null and m.get("inside") == true and m.get("room") == "cottage":
+		queue_redraw()  # 只在玩家在屋里时重画（窗外天色会变）
 
 
 func _draw() -> void:
