@@ -87,6 +87,12 @@ godot --headless --path . res://tests/smoke_test.tscn -- --profile=smoke
 
 测试使用单独的 `smoke` 存档档位，结束后会自动删除，不影响正常存档。
 
+`tests/soak_test.tscn` 是浸泡测试：机器人用 8 倍速随机玩 1 分钟（走路、互动、点对话、钓鱼、做菜、开关面板、换季、换天气、存读档），用来发现偶发的运行时错误：
+
+```bash
+godot --headless --path . res://tests/soak_test.tscn -- --profile=soak
+```
+
 ## 打包分享（导出 Windows 版）
 
 项目里已经带了 Windows 导出预设，导出后的 exe 不需要安装 Godot，可以直接发给小伙伴一起联机。
