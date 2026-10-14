@@ -209,6 +209,24 @@ func _run() -> void:
 	check(GameState.season_name() == "冬" and GameState.season_growth("strawberry") < 1.0, "冬天不当季作物长得慢")
 	GameState.day = day0
 
+	print("[NPC 作息]")
+	var lele = null
+	var shopkeeper = null
+	for n in get_tree().get_nodes_in_group("npcs"):
+		if n.display_name == "乐乐":
+			lele = n
+		elif n.role == "shop":
+			shopkeeper = n
+	var minutes0: float = GameState.minutes
+	GameState.minutes = 23.0 * 60.0
+	lele.position = lele.sleep_spot
+	await _frames(3)
+	check(lele.sleeping and not shopkeeper.sleeping, "深夜乐乐睡觉，店长通宵营业")
+	GameState.minutes = 7.0 * 60.0
+	await _frames(3)
+	check(not lele.sleeping, "早上乐乐醒来")
+	GameState.minutes = minutes0
+
 	print("[存档]")
 	GameState.save_game()
 	var snapshot := {"beans": GameState.beans, "level": GameState.player_level, "hat": GameState.hat, "name": GameState.player_name}

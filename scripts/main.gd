@@ -18,6 +18,11 @@ const FestivalDeco = preload("res://scripts/festival_deco.gd")
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
+## NPC 晚上睡觉的地方（乐乐家门口、百货旁、城堡门口）
+const SLEEP_SPOTS := {
+	"乐乐": Vector2(650, 530), "小黄": Vector2(585, 545), "嘟嘟": Vector2(715, 545),
+	"米米": Vector2(1830, 560), "阿呆": Vector2(1250, 365),
+}
 
 var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
@@ -303,6 +308,7 @@ func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, 
 	npc.hat = hat
 	npc.body_color = col
 	npc.lines = lines
+	npc.sleep_spot = SLEEP_SPOTS.get(n, Vector2.ZERO)
 	ysort.add_child(npc)
 
 
