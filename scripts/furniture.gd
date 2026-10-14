@@ -15,8 +15,8 @@ func _ready() -> void:
 	t = randf() * 10.0
 	if index >= 0:
 		add_to_group("interactable")
-	set_process(kind in ["swing", "windmill", "campfire", "lantern"])
-	if kind == "campfire" or kind == "lantern":
+	set_process(kind in ["swing", "windmill", "campfire", "lantern", "pumpkin_lamp"])
+	if kind == "campfire" or kind == "lantern" or kind == "pumpkin_lamp":
 		var g := Gradient.new()
 		g.set_color(0, Color(1, 1, 1, 1))
 		g.set_color(1, Color(1, 1, 1, 0))
@@ -76,6 +76,10 @@ func _draw() -> void:
 		"lahm_house": _lahm_house()
 		"windmill": _windmill()
 		"trophy": _trophy()
+		"sakura_bonsai": _sakura_bonsai()
+		"melon_chair": _melon_chair()
+		"pumpkin_lamp": _pumpkin_lamp()
+		"snowman": _snowman()
 
 
 func _pot() -> void:
@@ -218,3 +222,48 @@ func _trophy() -> void:
 	draw_arc(Vector2(18, -56), 7.0, -PI * 0.5, PI * 0.5, 8, gold, 3.0)
 	draw_circle(Vector2(-6, -58), 3.0, Color(1, 1, 0.8, 0.8))
 	D.text(self, Vector2(0, -72), "★", 14, Color(1, 0.95, 0.6))
+
+
+func _sakura_bonsai() -> void:
+	draw_colored_polygon(PackedVector2Array([Vector2(-18, -16), Vector2(18, -16), Vector2(13, 0), Vector2(-13, 0)]), Color(0.45, 0.55, 0.75))
+	draw_rect(Rect2(-20, -20, 40, 5), Color(0.38, 0.48, 0.68))
+	draw_line(Vector2(0, -20), Vector2(-4, -40), Color(0.45, 0.3, 0.2), 4.0)
+	draw_line(Vector2(-4, -40), Vector2(10, -52), Color(0.45, 0.3, 0.2), 3.0)
+	for p in [Vector2(-12, -48), Vector2(4, -58), Vector2(16, -50), Vector2(-2, -44), Vector2(10, -40)]:
+		draw_circle(p, 9.0, Color(1, 0.75, 0.85))
+	for p in [Vector2(-8, -54), Vector2(12, -56), Vector2(4, -46)]:
+		draw_circle(p, 3.0, Color(1, 0.55, 0.7))
+
+
+func _melon_chair() -> void:
+	var red := Color(0.95, 0.35, 0.4)
+	draw_colored_polygon(PackedVector2Array([Vector2(-30, -8), Vector2(26, -8), Vector2(32, -40), Vector2(20, -40), Vector2(16, -18), Vector2(-30, -18)]), Color(0.3, 0.65, 0.3))
+	draw_colored_polygon(PackedVector2Array([Vector2(-28, -11), Vector2(24, -11), Vector2(29, -37), Vector2(22, -37), Vector2(18, -15), Vector2(-28, -15)]), red)
+	for x in [-20.0, -8.0, 4.0]:
+		draw_circle(Vector2(x, -13), 1.5, Color(0.15, 0.1, 0.1))
+	draw_rect(Rect2(-28, -8, 4, 8), Color(0.4, 0.3, 0.2))
+	draw_rect(Rect2(20, -8, 4, 8), Color(0.4, 0.3, 0.2))
+
+
+func _pumpkin_lamp() -> void:
+	var orange := Color(1.0, 0.55, 0.1)
+	D.ell(self, Vector2(0, -18), Vector2(22, 17), orange)
+	D.ell(self, Vector2(0, -18), Vector2(9, 17), orange.lightened(0.1))
+	draw_line(Vector2(0, -35), Vector2(4, -44), Color(0.35, 0.45, 0.15), 4.0)
+	var glow := Color(1, 0.95, 0.4) if GameState.is_night() and not ghost else Color(0.35, 0.18, 0.05)
+	draw_colored_polygon(PackedVector2Array([Vector2(-12, -24), Vector2(-4, -24), Vector2(-8, -16)]), glow)
+	draw_colored_polygon(PackedVector2Array([Vector2(4, -24), Vector2(12, -24), Vector2(8, -16)]), glow)
+	draw_colored_polygon(PackedVector2Array([Vector2(-10, -10), Vector2(10, -10), Vector2(6, -5), Vector2(0, -8), Vector2(-6, -5)]), glow)
+
+
+func _snowman() -> void:
+	draw_circle(Vector2(0, -16), 18.0, Color(0.97, 0.98, 1.0))
+	draw_circle(Vector2(0, -44), 13.0, Color(0.97, 0.98, 1.0))
+	draw_circle(Vector2(-4, -47), 1.8, Color(0.1, 0.1, 0.1))
+	draw_circle(Vector2(4, -47), 1.8, Color(0.1, 0.1, 0.1))
+	draw_colored_polygon(PackedVector2Array([Vector2(0, -44), Vector2(0, -40), Vector2(12, -42)]), Color(1, 0.55, 0.15))
+	draw_rect(Rect2(-14, -36, 28, 5), Color(0.85, 0.2, 0.2))
+	draw_rect(Rect2(-10, -66, 20, 12), Color(0.2, 0.2, 0.25))
+	draw_rect(Rect2(-14, -56, 28, 4), Color(0.2, 0.2, 0.25))
+	for y in [-24.0, -14.0]:
+		draw_circle(Vector2(0, y), 2.0, Color(0.2, 0.2, 0.25))

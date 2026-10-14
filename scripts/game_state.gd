@@ -58,6 +58,11 @@ const FURNITURE := {
 	"swing": {"name": "秋千", "price": 160, "level": 5},
 	"lahm_house": {"name": "拉姆小屋", "price": 220, "level": 6},
 	"windmill": {"name": "风车", "price": 320, "level": 8},
+	# 季节限定：只在对应季节的商店里卖
+	"sakura_bonsai": {"name": "樱花盆景", "price": 150, "level": 2, "season": 0},
+	"melon_chair": {"name": "西瓜躺椅", "price": 150, "level": 2, "season": 1},
+	"pumpkin_lamp": {"name": "南瓜灯", "price": 150, "level": 2, "season": 2},
+	"snowman": {"name": "雪人", "price": 150, "level": 2, "season": 3},
 	"trophy": {"name": "金奖杯", "price": 0, "level": 1, "shop": false},  # 国王的每周挑战奖励，商店不卖
 }
 const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围

@@ -153,8 +153,10 @@ func populate() -> void:
 				var f: Dictionary = GameState.FURNITURE[id]
 				if not f.get("shop", true):
 					continue
+				if f.has("season") and int(f["season"]) != GameState.season():
+					continue  # 季节限定家具只在对应季节卖
 				var have := GameState.count("furn_" + id)
-				var info := "%s   %d豆%s" % [f["name"], f["price"], "（背包里有 %d 个）" % have if have > 0 else ""]
+				var info := "%s   %d豆%s%s" % [f["name"], f["price"], "  【%s季限定】" % GameState.season_name() if f.has("season") else "", "（背包里有 %d 个）" % have if have > 0 else ""]
 				if GameState.player_level >= int(f["level"]):
 					_row(info, [["购买", buy.bind("furn_" + id, int(f["price"]), 1)]])
 				else:
