@@ -54,6 +54,8 @@ var save_path := "user://mole_save.json"
 var player_name := ""
 var body_color := ""
 var help_today: int = 0  # 今天串门帮忙已领奖励的次数
+var music_volume := 0.6
+var sfx_volume := 0.8
 var raining := false
 var weather_timer := 60.0
 
@@ -141,6 +143,8 @@ func remove_item(id: String, n: int = 1) -> bool:
 
 func add_beans(n: int) -> void:
 	beans += n
+	if n > 0:
+		Sfx.play("coin")
 	beans_changed.emit()
 
 
@@ -148,6 +152,7 @@ func spend_beans(n: int) -> bool:
 	if beans < n:
 		return false
 	beans -= n
+	Sfx.play("buy")
 	beans_changed.emit()
 	return true
 
@@ -211,7 +216,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -243,6 +248,8 @@ func load_game() -> bool:
 	quest = data.get("quest", {})
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
+	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
+	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
 	player_name = str(data.get("player_name", "")).left(10)
 	body_color = str(data.get("body_color", ""))
@@ -301,6 +308,13 @@ func _setup_theme() -> void:
 	fill.set_content_margin_all(0)
 	th.set_stylebox("background", "ProgressBar", bg)
 	th.set_stylebox("fill", "ProgressBar", fill)
+	var track := _box(Color(0.85, 0.8, 0.72), Color(0.6, 0.45, 0.3))
+	track.set_content_margin_all(3)
+	var done := _box(Color(1.0, 0.65, 0.25), Color(0.65, 0.38, 0.12))
+	done.set_content_margin_all(3)
+	th.set_stylebox("slider", "HSlider", track)
+	th.set_stylebox("grabber_area", "HSlider", done)
+	th.set_stylebox("grabber_area_highlight", "HSlider", done)
 	ui_theme = th
 	get_tree().root.theme = th
 
@@ -335,3 +349,27 @@ func set_raining(r: bool, broadcast: bool = true) -> void:
 	toast.emit("下雨啦！雨水会自动浇灌农田" if r else "雨停了，天晴啦~")
 	if broadcast:
 		Net.send_weather(r)
+
+
+## 清空存档重新开始（保留名字、毛色和音量设置）
+func reset_game() -> void:
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+	beans = 100
+	inventory = {"seed_carrot": 5, "lahm_fruit": 2}
+	selected_seed = "carrot"
+	hat = "none"
+	owned_hats = ["none"]
+	lahm_hunger = 80.0
+	day = 1
+	minutes = 480.0
+	quests_done = 0
+	plots = {}
+	help_today = 0
+	offline_seconds = 0.0
+	raining = false
+	weather_timer = 60.0
+	new_quest()
+	beans_changed.emit()
+	inventory_changed.emit()
+	hat_changed.emit()

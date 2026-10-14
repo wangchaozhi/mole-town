@@ -61,6 +61,7 @@ func interact(_pl) -> void:
 		GameState.lahm_hunger = minf(100.0, GameState.lahm_hunger + 40.0)
 		GameState.toast.emit("拉姆吃了拉姆果，好开心！")
 		_burst()
+		Sfx.play("happy")
 		return
 	for c in GameState.CROPS:
 		if GameState.count(c) > 0:
@@ -68,6 +69,7 @@ func interact(_pl) -> void:
 			GameState.lahm_hunger = minf(100.0, GameState.lahm_hunger + 20.0)
 			GameState.toast.emit("拉姆吃了一个%s" % GameState.item_name(c))
 			_burst()
+			Sfx.play("happy")
 			return
 	GameState.toast.emit("背包里没有吃的了，去摩尔百货买拉姆果吧")
 

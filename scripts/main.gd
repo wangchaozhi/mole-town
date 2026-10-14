@@ -109,7 +109,8 @@ func _ready() -> void:
 	Net.peer_moved.connect(_on_peer_moved)
 	Net.peer_chat.connect(_on_peer_chat)
 	Net.gift_received.connect(_on_gift)
-	GameState.hat_changed.connect(Net.send_info)
+	if not GameState.hat_changed.is_connected(Net.send_info):
+		GameState.hat_changed.connect(Net.send_info)
 	var sync := Timer.new()
 	sync.wait_time = 0.1
 	sync.autostart = true
@@ -209,6 +210,7 @@ func _on_roster_changed() -> void:
 			lh.position = r.position + Vector2(-50, 0)
 			ysort.add_child(lh)
 			r.lahm = lh
+			Sfx.play("door")
 			ui.add_chat_line("", "【系统】%s 来到了小镇" % info["name"], Color(1, 0.9, 0.4))
 		remotes[id].apply_info(info)
 	for id in remotes.keys():
@@ -237,12 +239,14 @@ func _update_remote_visibility() -> void:
 
 
 func _on_peer_chat(id: int, text: String) -> void:
+	Sfx.play("pop")
 	if remotes.has(id):
 		remotes[id].say(text)
 	ui.add_chat_line(Net.player_name(id), text)
 
 
 func _on_gift(id: int, beans: int) -> void:
+	Sfx.play("gift")
 	GameState.add_beans(beans)
 	GameState.toast.emit("%s 送给你 %d 摩尔豆！" % [Net.player_name(id), beans])
 

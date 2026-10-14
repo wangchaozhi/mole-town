@@ -91,6 +91,7 @@ func interact(_pl) -> void:
 	if bug:
 		bug = false
 		GameState.add_beans(3)
+		Sfx.play("bug")
 		GameState.toast.emit("抓走了一只害虫！+3 摩尔豆")
 		return
 	if crop == "":
@@ -100,6 +101,7 @@ func interact(_pl) -> void:
 			growth = 0.0
 			water_time = 0.0
 			picked = false
+			Sfx.play("plant")
 			GameState.toast.emit("种下了%s，记得浇水哦" % GameState.item_name("seed_" + seed))
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
@@ -108,6 +110,7 @@ func interact(_pl) -> void:
 		GameState.add_item(crop, n)
 		for i in n:
 			GameState.report("harvest", crop)
+		Sfx.play("harvest")
 		GameState.toast.emit("收获了 %s ×%d！" % [GameState.item_name(crop), n])
 		crop = ""
 		growth = 0.0
@@ -115,6 +118,7 @@ func interact(_pl) -> void:
 		picked = false
 	elif water_time <= 0.0:
 		water_time = 20.0
+		Sfx.play("water")
 		GameState.toast.emit("浇水完成，接下来 20 秒生长速度翻倍！")
 	else:
 		GameState.toast.emit("%s 正在生长中…… %d%%" % [GameState.item_name(crop), int(growth * 100)])
@@ -141,6 +145,7 @@ func _visit_interact() -> void:
 	else:
 		GameState.toast.emit("%s 正在生长中…… %d%%" % [GameState.item_name(c), int(float(s["growth"]) * 100)])
 		return
+	Sfx.play({"water": "water", "bug": "bug", "pick": "harvest"}[action])
 	Net.send_farm_action(plot_id, action)
 
 

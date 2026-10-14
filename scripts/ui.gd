@@ -49,6 +49,7 @@ var ip_edit: LineEdit
 var port_edit: LineEdit
 var net_status: Label
 var net_list: Label
+var settings_panel: PanelContainer
 var visit_bar: PanelContainer
 var visit_label: Label
 
@@ -78,6 +79,7 @@ func _ready() -> void:
 	_build_fish()
 	_build_net()
 	_build_visit_bar()
+	_build_settings()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -118,6 +120,7 @@ func _button(text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
+	b.pressed.connect(Sfx.play.bind("click"))
 	b.pressed.connect(cb)
 	return b
 
@@ -174,6 +177,7 @@ func _build_hud() -> void:
 	top.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	top.add_child(_button("联机 (N)", toggle_net))
 	top.add_child(_button("背包 (B)", toggle_bag))
+	top.add_child(_button("设置", toggle_settings))
 	top.add_child(_button("帮助 (H)", func(): help_panel.visible = not help_panel.visible))
 	top.add_child(_button("保存", func():
 		GameState.save_game()
@@ -599,6 +603,7 @@ func _close_all() -> void:
 	close_popups()
 	help_panel.visible = false
 	net_panel.visible = false
+	settings_panel.visible = false
 	if fishing:
 		_stop_fishing()
 
@@ -836,6 +841,7 @@ func start_fishing(pond_pos: Vector2) -> void:
 	if absf(dx) > 1.0:
 		player.facing = signf(dx)
 	fish_label.text = "等待鱼儿上钩……（太早收杆会把鱼吓跑哦）"
+	Sfx.play("splash")
 	fish_panel.visible = true
 	fish_bar.queue_redraw()
 
@@ -852,6 +858,7 @@ func _fish_process(delta: float) -> void:
 				fish_zone = Vector2(randf_range(0.15, 0.7), randf_range(0.14, 0.24))
 				fish_speed = randf_range(1.2, 2.0)
 				fish_label.text = "鱼上钩了！红色标记在绿色区域时按空格收杆！"
+				Sfx.play("bite")
 				player.bite = true
 		1:
 			fish_marker += fish_dir * fish_speed * delta
@@ -863,6 +870,7 @@ func _fish_process(delta: float) -> void:
 				fish_dir = 1.0
 			fish_timer -= delta
 			if fish_timer <= 0.0:
+				Sfx.play("fail")
 				_fish_end("鱼儿挣脱跑掉了……")
 		2:
 			fish_timer -= delta
@@ -875,17 +883,21 @@ func _reel() -> void:
 	if not fishing:
 		return
 	if fish_phase == 0:
+		Sfx.play("fail")
 		_fish_end("拉得太早了，鱼被吓跑了！")
 	elif fish_phase == 1:
 		if fish_marker >= fish_zone.x and fish_marker <= fish_zone.x + fish_zone.y:
 			var id := _roll_fish()
 			GameState.add_item(id)
 			if id == "boot":
+				Sfx.play("fail")
 				_fish_end("钓上来一只……破靴子？！")
 			else:
 				GameState.report("fish", id)
+				Sfx.play("catch")
 				_fish_end("钓到了一条%s！" % GameState.item_name(id))
 		else:
+			Sfx.play("fail")
 			_fish_end("没拉住，鱼跑掉了！")
 
 
@@ -924,3 +936,67 @@ func _draw_fish_bar() -> void:
 		var x := fish_marker * s.x
 		fish_bar.draw_rect(Rect2(x - 4, -4, 8, s.y + 8), Color(0.95, 0.25, 0.2))
 	fish_bar.draw_rect(Rect2(Vector2.ZERO, s), Color(0.3, 0.2, 0.1), false, 2.0)
+
+
+# ---------- 设置 ----------
+
+func _build_settings() -> void:
+	settings_panel = _panel()
+	_centered(settings_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 12)
+	settings_panel.add_child(v)
+	var title := HBoxContainer.new()
+	var tl := _label("设置", 24)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_child(tl)
+	title.add_child(_button("关闭", toggle_settings))
+	v.add_child(title)
+	v.add_child(_volume_row("背景音乐", GameState.music_volume, func(x):
+		GameState.music_volume = x
+		Sfx.apply_volumes()))
+	v.add_child(_volume_row("音效", GameState.sfx_volume, func(x):
+		GameState.sfx_volume = x
+		Sfx.apply_volumes()
+		Sfx.play("click")))
+	v.add_child(HSeparator.new())
+	var hb := HBoxContainer.new()
+	var warn := _label("清空农场、背包和任务，从头开始", 15)
+	warn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb.add_child(warn)
+	hb.add_child(_button("重置存档", _confirm_reset))
+	v.add_child(hb)
+	settings_panel.visible = false
+
+
+func _volume_row(text: String, value: float, on_change: Callable) -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	var l := _label(text, 17)
+	l.custom_minimum_size = Vector2(90, 0)
+	hb.add_child(l)
+	var s := HSlider.new()
+	s.min_value = 0.0
+	s.max_value = 1.0
+	s.step = 0.05
+	s.value = value
+	s.custom_minimum_size = Vector2(300, 24)
+	s.focus_mode = Control.FOCUS_NONE
+	s.value_changed.connect(on_change)
+	hb.add_child(s)
+	return hb
+
+
+func toggle_settings() -> void:
+	settings_panel.visible = not settings_panel.visible
+
+
+func _confirm_reset() -> void:
+	settings_panel.visible = false
+	show_dialog("重置存档", "确定要清空农场、背包、摩尔豆和任务，从头开始吗？（名字和音量设置会保留）",
+		[["确定重置", _reset_save], ["再想想", _noop]])
+
+
+func _reset_save() -> void:
+	Net.leave()
+	GameState.reset_game()
+	get_tree().reload_current_scene()

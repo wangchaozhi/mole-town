@@ -11,6 +11,7 @@ config/features=PackedStringArray("4.7")
 
 GameState="*res://scripts/game_state.gd"
 Net="*res://scripts/net.gd"
+Sfx="*res://scripts/sfx.gd"
 
 [display]
 
