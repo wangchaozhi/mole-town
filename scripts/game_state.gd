@@ -46,6 +46,8 @@ const HATS := {
 }
 
 const LAHM_FRUIT_PRICE := 15
+const FERTILIZER_PRICE := 25  # 肥料：作物生长 ×1.5，收获必定多 1 个
+const FERTILIZER_LEVEL := 2
 
 const FURNITURE := {
 	"pot": {"name": "小花盆", "price": 30, "level": 1},
@@ -160,6 +162,8 @@ func item_name(id: String) -> String:
 		return FISH[id]["name"]
 	if id == "lahm_fruit":
 		return "拉姆果"
+	if id == "fertilizer":
+		return "肥料"
 	if DISHES.has(id):
 		return DISHES[id]["name"]
 	if id.begins_with("furn_") and FURNITURE.has(id.substr(5)):

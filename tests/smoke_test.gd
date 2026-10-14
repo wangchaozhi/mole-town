@@ -148,6 +148,21 @@ func _run() -> void:
 	await _frames(2)
 	check(main.plots.size() == 16 and main.plots[12].visible, "温室多出 4 块地")
 
+	var fp = main.plots[13]
+	GameState.add_item("seed_carrot")
+	GameState.add_item("fertilizer")
+	GameState.selected_seed = "carrot"
+	fp.bug = false
+	fp.crop = ""
+	fp.interact(p)  # 种
+	fp.interact(p)  # 浇水
+	fp.interact(p)  # 施肥
+	check(fp.fert and GameState.count("fertilizer") == 0, "给作物施肥")
+	fp.growth = 1.0
+	var carrots := GameState.count("carrot")
+	fp.interact(p)
+	check(GameState.count("carrot") - carrots >= 2 and not fp.fert, "施过肥的作物收获至少 2 个")
+
 	print("[拉姆]")
 	var lahm = get_tree().get_first_node_in_group("my_lahm")
 	GameState.lahm_hunger = 30.0

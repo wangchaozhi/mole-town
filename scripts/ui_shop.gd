@@ -82,6 +82,12 @@ func populate() -> void:
 	var noop: Callable = ui._noop
 	match tab:
 		"seeds":
+			var fp := GameState.FERTILIZER_PRICE
+			var finfo := "肥料   %d豆\n点一下正在长的作物施肥：生长 ×1.5，收获多 1 个（你有 %d 个）" % [fp, GameState.count("fertilizer")]
+			if GameState.player_level >= GameState.FERTILIZER_LEVEL:
+				_row(finfo, [["买1个", buy.bind("fertilizer", fp, 1)], ["买5个", buy.bind("fertilizer", fp, 5)]])
+			else:
+				_row(finfo, [["Lv%d 解锁" % GameState.FERTILIZER_LEVEL, noop, true]])
 			for id in GameState.CROPS:
 				var c: Dictionary = GameState.CROPS[id]
 				var price := GameState.seed_price(id)

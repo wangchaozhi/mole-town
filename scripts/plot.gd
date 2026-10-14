@@ -13,6 +13,7 @@ var picked := false  # 成熟后是否已被来串门的好友摘过
 var t := 0.0
 var remote = null  # 串门时：好友这块地的状态 Dictionary
 var greenhouse := false  # 温室里的地块
+var fert := false  # 施过肥：生长 ×1.5，收获多 1 个
 var _was_busy := true
 
 
@@ -27,6 +28,7 @@ func _ready() -> void:
 		water_time = float(s.get("water_time", 0.0))
 		bug = bool(s.get("bug", false))
 		picked = bool(s.get("picked", false))
+		fert = bool(s.get("fert", false))
 		if crop != "" and not GameState.CROPS.has(crop):
 			crop = ""
 		if crop != "" and not bug:
@@ -34,7 +36,7 @@ func _ready() -> void:
 
 
 func get_state() -> Dictionary:
-	return {"crop": crop, "growth": growth, "water_time": water_time, "bug": bug, "picked": picked}
+	return {"crop": crop, "growth": growth, "water_time": water_time, "bug": bug, "picked": picked, "fert": fert}
 
 
 func store_state() -> void:
@@ -51,6 +53,7 @@ func set_remote(s) -> void:
 		"water_time": float(s.get("water_time", 0.0)),
 		"bug": bool(s.get("bug", false)),
 		"picked": bool(s.get("picked", false)),
+		"fert": bool(s.get("fert", false)),
 	}
 
 
@@ -62,6 +65,8 @@ func _advance(sec: float) -> void:
 	if crop == "" or growth >= 1.0:
 		return
 	var speed := maxf(GameState.season_growth(crop), 1.0) * 1.2 if greenhouse else GameState.season_growth(crop)
+	if fert:
+		speed *= 1.5
 	var gt: float = GameState.CROPS[crop]["grow_time"] / speed
 	var wet := minf(sec, water_time)
 	growth = minf(1.0, growth + (wet * 2.0 + (sec - wet)) / gt)
@@ -112,6 +117,7 @@ func interact(_pl) -> void:
 			growth = 0.0
 			water_time = 0.0
 			picked = false
+			fert = false
 			Sfx.play("plant")
 			GameState.add_exp(1)
 			GameState.tutorial_event("plant")
@@ -119,7 +125,7 @@ func interact(_pl) -> void:
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
 	elif growth >= 1.0:
-		var n := 1 + (1 if randf() < 0.35 else 0) + (1 if GameState.festival() == "harvest" else 0)
+		var n := 1 + (1 if randf() < 0.35 else 0) + (1 if GameState.festival() == "harvest" else 0) + (1 if fert else 0)
 		GameState.add_item(crop, n)
 		GameState.record("harvest", crop, n)
 		for i in n:
@@ -130,13 +136,20 @@ func interact(_pl) -> void:
 		growth = 0.0
 		water_time = 0.0
 		picked = false
+		fert = false
 	elif water_time <= 0.0:
 		water_time = 20.0
 		Sfx.play("water")
 		GameState.tutorial_event("water")
 		GameState.toast.emit("浇水完成，接下来 20 秒生长速度翻倍！")
+	elif not fert and GameState.count("fertilizer") > 0:
+		GameState.remove_item("fertilizer")
+		fert = true
+		Sfx.play("plant")
+		GameState.add_exp(1)
+		GameState.toast.emit("施了肥！%s 长得更快，收获还会多一个" % GameState.item_name(crop))
 	else:
-		GameState.toast.emit("%s 正在生长中…… %d%%" % [GameState.item_name(crop), int(growth * 100)])
+		GameState.toast.emit("%s 正在生长中…… %d%%%s" % [GameState.item_name(crop), int(growth * 100), "（已施肥）" if fert else ""])
 
 
 # ---------- 串门 ----------
@@ -200,6 +213,9 @@ func _draw() -> void:
 		draw_line(Vector2(-32, -12 + i * 12), Vector2(32, -12 + i * 12), soil.darkened(0.25), 2.0)
 	if c_crop == "":
 		return
+	if s.get("fert", false):
+		for g in [Vector2(-26, 14), Vector2(-14, 18), Vector2(20, 15), Vector2(28, 8), Vector2(-30, -4), Vector2(12, 20)]:
+			draw_circle(g, 2.2, Color(0.95, 0.85, 0.45))
 	var col: Color = GameState.CROPS[c_crop]["color"]
 	var leaf := Color(0.3, 0.68, 0.25)
 	if c_growth < 0.33:
