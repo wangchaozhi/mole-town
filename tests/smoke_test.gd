@@ -140,6 +140,12 @@ func _run() -> void:
 	check(GameState.buy_rod(1) and GameState.rod_level == 1 and not GameState.buy_rod(1), "买好鱼竿（不能重复买）")
 	check(GameState.buy_sprinkler() and GameState.has_sprinkler, "买自动洒水器")
 
+	check(not main.plots[12].visible and not main.plots[12].hit_test(main.plots[12].position), "没买温室时温室地块不可用")
+	GameState.add_beans(1000)
+	check(GameState.buy_greenhouse() and GameState.has_greenhouse, "买温室")
+	await _frames(2)
+	check(main.plots.size() == 16 and main.plots[12].visible, "温室多出 4 块地")
+
 	print("[拉姆]")
 	var lahm = get_tree().get_first_node_in_group("my_lahm")
 	GameState.lahm_hunger = 30.0

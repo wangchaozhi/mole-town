@@ -138,6 +138,13 @@ func populate() -> void:
 				_row(sd, [["Lv%d 解锁" % GameState.SPRINKLER_LEVEL, noop, true]])
 			else:
 				_row(sd, [["购买", _buy_sprinkler]])
+			var gd := "温室   %d豆\n在农场右边，多 4 块地：长得快 1.2 倍、冬天不减速、不会生虫" % GameState.GREENHOUSE_PRICE
+			if GameState.has_greenhouse:
+				_row(gd, [["已建好", noop, true]])
+			elif GameState.player_level < GameState.GREENHOUSE_LEVEL:
+				_row(gd, [["Lv%d 解锁" % GameState.GREENHOUSE_LEVEL, noop, true]])
+			else:
+				_row(gd, [["购买", _buy_greenhouse]])
 		"furniture":
 			list.add_child(ui._label("买好的家具在背包里点「摆放」，放到农场旁边的「我的小院」里。好友串门时能看到哦！", 15))
 			for id in GameState.FURNITURE:
@@ -227,6 +234,14 @@ func _buy_rod(lv: int) -> void:
 func _buy_sprinkler() -> void:
 	if GameState.buy_sprinkler():
 		ui.show_toast("自动洒水器装好了！就在农场中间")
+	else:
+		ui.show_toast("摩尔豆不够啦！")
+	populate()
+
+
+func _buy_greenhouse() -> void:
+	if GameState.buy_greenhouse():
+		ui.show_toast("温室建好了！就在农场右边，多了 4 块地")
 	else:
 		ui.show_toast("摩尔豆不够啦！")
 	populate()

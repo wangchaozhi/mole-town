@@ -12,6 +12,7 @@ var bug := false
 var picked := false  # 成熟后是否已被来串门的好友摘过
 var t := 0.0
 var remote = null  # 串门时：好友这块地的状态 Dictionary
+var greenhouse := false  # 温室里的地块
 
 
 func _ready() -> void:
@@ -59,7 +60,8 @@ func clear_remote() -> void:
 func _advance(sec: float) -> void:
 	if crop == "" or growth >= 1.0:
 		return
-	var gt: float = GameState.CROPS[crop]["grow_time"] / GameState.season_growth(crop)
+	var speed := maxf(GameState.season_growth(crop), 1.0) * 1.2 if greenhouse else GameState.season_growth(crop)
+	var gt: float = GameState.CROPS[crop]["grow_time"] / speed
 	var wet := minf(sec, water_time)
 	growth = minf(1.0, growth + (wet * 2.0 + (sec - wet)) / gt)
 	water_time = maxf(0.0, water_time - sec)
@@ -67,16 +69,20 @@ func _advance(sec: float) -> void:
 
 func _process(delta: float) -> void:
 	t += delta
+	if greenhouse:
+		visible = GameState.has_greenhouse
 	if crop != "" and growth < 1.0 and GameState.raining:
 		water_time = maxf(water_time, 3.0)  # 下雨自动浇水
 	if crop != "" and growth < 1.0 and not bug:
 		_advance(delta)
-		if randf() < delta * 0.004:
+		if not greenhouse and randf() < delta * 0.004:
 			bug = true
 	queue_redraw()
 
 
 func hit_test(p: Vector2) -> bool:
+	if not visible:
+		return false
 	return Rect2(position + Vector2(-40, -62), Vector2(80, 90)).has_point(p)
 
 

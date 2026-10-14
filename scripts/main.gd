@@ -30,7 +30,7 @@ const ROOMS := {
 	"castle": {"view": Rect2(2680, 840, 1280, 720), "walk": Rect2(3030, 1160, 580, 230), "exit": Vector2(1200, 390), "map": Vector2(1200, 330)},
 }
 
-const FARM_RECT := Rect2(1570, 850, 560, 360)
+const FARM_RECT := Rect2(1570, 850, 780, 360)  # 农场 + 温室
 const HELP_REWARDS_PER_DAY := 20
 ## NPC 晚上睡觉的地方（乐乐家门口、百货旁、城堡门口）
 const SLEEP_SPOTS := {
@@ -405,6 +405,16 @@ func _build_farm() -> void:
 			plot.position = Vector2(1700 + c * 105, 960 + r * 82)
 			ysort.add_child(plot)
 			plots.append(plot)
+	var Greenhouse = preload("res://scripts/greenhouse.gd")
+	add_child(Greenhouse.new())
+	for r in 2:
+		for c in 2:
+			var gp = Plot.new()
+			gp.plot_id = 12 + r * 2 + c
+			gp.greenhouse = true
+			gp.position = Vector2(2185 + c * 92, 975 + r * 120)
+			ysort.add_child(gp)
+			plots.append(gp)
 
 
 func _unhandled_input(event: InputEvent) -> void:

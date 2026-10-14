@@ -91,7 +91,7 @@ func _helper_tasks(delta: float) -> void:
 		return
 	scan_timer = 1.0
 	for p in get_tree().get_nodes_in_group("plots"):
-		if p.remote != null or p.position.distance_to(player.position) > 380.0:
+		if p.remote != null or not p.visible or p.position.distance_to(player.position) > 380.0:
 			continue
 		if p.bug:
 			task_plot = p
