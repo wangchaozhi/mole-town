@@ -8,6 +8,7 @@ signal roster_changed
 signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool, farm: int)
 signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
+signal item_received(id: int, item: String, n: int)
 signal peer_emote(id: int, kind: String)
 signal visit_changed
 signal farm_visitor_joined(id: int)
@@ -310,3 +311,16 @@ func send_emote(kind: String) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func emote(kind: String) -> void:
 	peer_emote.emit(multiplayer.get_remote_sender_id(), str(kind).left(10))
+
+
+# ---------- 送物品 ----------
+
+func send_item(id: int, item: String, n: int) -> void:
+	if is_online():
+		gift_item.rpc_id(id, item, n)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func gift_item(item: String, n: int) -> void:
+	if GameState.is_giftable(item) and n >= 1 and n <= 20:
+		item_received.emit(multiplayer.get_remote_sender_id(), item, n)

@@ -116,6 +116,7 @@ func _ready() -> void:
 	Net.peer_moved.connect(_on_peer_moved)
 	Net.peer_chat.connect(_on_peer_chat)
 	Net.gift_received.connect(_on_gift)
+	Net.item_received.connect(_on_item_gift)
 	Net.peer_emote.connect(func(id, kind):
 		if remotes.has(id):
 			remotes[id].play_emote(kind))
@@ -522,3 +523,13 @@ func teleport(p: Vector2) -> void:
 	fx.pop(p)
 	Sfx.play("door")
 	player.play_emote("happy")
+
+
+func _on_item_gift(id: int, item: String, n: int) -> void:
+	Sfx.play("gift")
+	GameState.add_item(item, n)
+	var msg := "%s 送给你 %s ×%d！" % [Net.player_name(id), GameState.item_name(item), n]
+	GameState.toast.emit(msg)
+	ui.add_chat_line("", "【礼物】" + msg, Color(1, 0.8, 0.9))
+	if remotes.has(id):
+		remotes[id].play_emote("happy")

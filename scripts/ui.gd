@@ -59,6 +59,10 @@ var collection_panel: PanelContainer
 var collection_body: VBoxContainer
 var signin_panel: PanelContainer
 var minimap_panel: PanelContainer
+var gift_panel: PanelContainer
+var gift_list: VBoxContainer
+var gift_title: Label
+var gift_target = null
 var signin_cards: HBoxContainer
 var signin_button: Button
 var signin_info: Label
@@ -101,6 +105,7 @@ func _ready() -> void:
 	_build_collection()
 	_build_signin()
 	_build_minimap()
+	_build_gift()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -391,6 +396,7 @@ func on_remote_interact(m) -> void:
 	show_dialog(m.display_name, "这是来自远方的小摩尔「%s」！" % m.display_name, [
 		["打招呼", _greet.bind(m)],
 		visit_opt,
+		["送礼物", open_gift.bind(m)],
 		["送 10 摩尔豆", _send_gift.bind(m)],
 		["再见", _noop],
 	])
@@ -685,6 +691,7 @@ func _close_all() -> void:
 	emote_bar.visible = false
 	collection_panel.visible = false
 	signin_panel.visible = false
+	gift_panel.visible = false
 	if fishing:
 		_stop_fishing()
 
@@ -1509,3 +1516,70 @@ func _build_minimap() -> void:
 	var tip := _label("点击地图传送 · M 键隐藏", 12)
 	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(tip)
+
+
+# ---------- 送礼物 ----------
+
+func _build_gift() -> void:
+	gift_panel = _panel()
+	_centered(gift_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	gift_panel.add_child(v)
+	var title := HBoxContainer.new()
+	gift_title = _label("", 22)
+	gift_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_child(gift_title)
+	title.add_child(_button("关闭", func(): gift_panel.visible = false))
+	v.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(480, 300)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	gift_list = VBoxContainer.new()
+	gift_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(gift_list)
+	v.add_child(scroll)
+	gift_panel.visible = false
+
+
+func open_gift(m) -> void:
+	gift_target = m
+	gift_title.text = "送礼物给 %s" % m.display_name
+	_refresh_gift()
+	gift_panel.visible = true
+
+
+func _refresh_gift() -> void:
+	for c in gift_list.get_children():
+		c.queue_free()
+	var any := false
+	for id in GameState.inventory:
+		if not GameState.is_giftable(id):
+			continue
+		any = true
+		var hb := HBoxContainer.new()
+		var l := _label("%s ×%d" % [GameState.item_name(id), GameState.count(id)], 16)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hb.add_child(l)
+		hb.add_child(_button("送1个", _give.bind(id, 1)))
+		if GameState.count(id) >= 5:
+			hb.add_child(_button("送5个", _give.bind(id, 5)))
+		gift_list.add_child(hb)
+	if not any:
+		gift_list.add_child(_label("背包里没有可以送的东西。", 16))
+
+
+func _give(item: String, n: int) -> void:
+	if gift_target == null or not is_instance_valid(gift_target) or not Net.is_online():
+		show_toast("对方已经不在了")
+		gift_panel.visible = false
+		return
+	if not GameState.remove_item(item, n):
+		return
+	Net.send_item(gift_target.peer_id, item, n)
+	Sfx.play("gift")
+	var msg := "送给 %s %s ×%d" % [gift_target.display_name, GameState.item_name(item), n]
+	show_toast(msg)
+	add_chat_line("", "【礼物】" + msg, Color(1, 0.8, 0.9))
+	player.play_emote("happy")
+	_refresh_gift()

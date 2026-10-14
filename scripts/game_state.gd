@@ -657,3 +657,14 @@ func price_mult(crop: String) -> float:
 func seed_price(crop: String) -> int:
 	var base := int(CROPS[crop]["seed_price"])
 	return maxi(1, roundi(base * 0.6)) if market()["sale"] == crop else base
+
+
+## 可以送给好友的物品（也用来校验收到的礼物）
+func is_giftable(id: String) -> bool:
+	if CROPS.has(id) or FISH.has(id) or id == "lahm_fruit":
+		return true
+	if id.begins_with("seed_"):
+		return CROPS.has(id.substr(5))
+	if id.begins_with("furn_"):
+		return FURNITURE.has(id.substr(5))
+	return false
