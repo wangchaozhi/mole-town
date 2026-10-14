@@ -253,6 +253,19 @@ func _run() -> void:
 	check(GameState.season_name() == "冬" and GameState.season_growth("strawberry") < 1.0, "冬天不当季作物长得慢")
 	GameState.day = day0
 
+	print("[季节限定家具]")
+	GameState.day = 22  # 冬天
+	ui.open_shop()
+	ui.shop.set_tab("furniture")
+	await _frames(2)
+	var furn_rows := []
+	for row in ui.shop.list.get_children():
+		if row is HBoxContainer:
+			furn_rows.append(row.get_child(0).text)
+	check(furn_rows.any(func(t): return "雪人" in t) and not furn_rows.any(func(t): return "南瓜灯" in t), "冬天的商店只卖雪人这件季节家具")
+	ui._close_all()
+	GameState.day = day0
+
 	print("[NPC 作息]")
 	var lele = null
 	var shopkeeper = null
