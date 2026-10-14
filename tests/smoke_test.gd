@@ -166,15 +166,15 @@ func _run() -> void:
 	check(p.emote == "wave", "做表情")
 
 	print("[接果子小游戏]")
-	ui._start_minigame()
-	check(GameState.input_locked and ui.game_view.active, "开始小游戏并锁定移动")
-	var gv = ui.game_view
+	ui.act._start_minigame()
+	check(GameState.input_locked and ui.act.game_view.active, "开始小游戏并锁定移动")
+	var gv = ui.act.game_view
 	gv.spawn_timer = 99.0
 	gv.fruits = [{"pos": Vector2(gv.basket_x, gv.H - 70), "speed": 200.0, "kind": "gold"}]
 	gv.time_left = 0.5
 	await get_tree().create_timer(1.0).timeout  # 无头模式帧很快，按真实时间等
 	check(not gv.active and gv.score == 5 and GameState.best_catch >= 5, "接到金果子 +5 并结算")
-	ui._close_minigame()
+	ui.act._close_minigame()
 	check(not GameState.input_locked, "离开小游戏解锁移动")
 
 	print("[留言板]")
@@ -182,7 +182,7 @@ func _run() -> void:
 	Net.post_board("冒烟测试留言")
 	check(GameState.board.size() == n0 + 1 and GameState.board[-1]["name"] == "测试员", "单机发布留言")
 	ui.open_board()
-	check(ui.board_panel.visible and ui.board_list.get_child_count() > 0, "打开留言板")
+	check(ui.act.board_panel.visible and ui.act.board_list.get_child_count() > 0, "打开留言板")
 	ui._close_all()
 
 	print("[节日]")
@@ -247,6 +247,15 @@ func _run() -> void:
 	ui._close_all()
 	ui.creator_panel.visible = false
 	check(not ui.help_panel.visible and not ui.bag_panel.visible, "所有面板都能打开和关闭")
+	var xiaohuang = null
+	for n in get_tree().get_nodes_in_group("npcs"):
+		if n.display_name == "小黄":
+			xiaohuang = n
+	GameState.add_item("corn")
+	ui.act.open_npc_gift(xiaohuang)
+	check(ui.act.gift_panel.visible, "打开给 NPC 送礼的面板")
+	ui.act._give("corn", 1)
+	check(GameState.affinity("小黄") == 15 and not ui.act.gift_panel.visible, "通过界面送小黄喜欢的玉米")
 
 	print("[存档]")
 	GameState.save_game()
