@@ -42,6 +42,7 @@ const HATS := {
 	"flower": {"name": "小花发卡", "price": 150},
 	"crown": {"name": "小王冠", "price": 500, "level": 6},
 	"wizard": {"name": "魔法帽", "price": 800, "level": 8},
+	"star_pin": {"name": "星星发卡", "price": 0, "level": 1, "shop": false},  # 主线剧情奖励
 }
 
 const LAHM_FRUIT_PRICE := 15
@@ -130,6 +131,7 @@ func _process(delta: float) -> void:
 		minutes -= DAY_MINUTES
 		_start_new_day()
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * (0.2 if lahm_level >= 2 else 0.25))
+	_maybe_start_story()
 	_update_weather(delta)
 
 
@@ -303,7 +305,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -345,6 +347,8 @@ func load_game() -> bool:
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
 	tutorial_step = int(data.get("tutorial_step", -1))
+	story_step = int(data.get("story_step", -2))
+	story_count = int(data.get("story_count", 0))
 	weekly_week = int(data.get("weekly_week", -1))
 	weekly_base = int(data.get("weekly_base", 0))
 	weekly_claimed = bool(data.get("weekly_claimed", false))
@@ -535,6 +539,8 @@ func reset_game() -> void:
 	board = []
 	tutorial_step = 0
 	mail = []
+	story_step = -2
+	story_count = 0
 	achievements = []
 	raining = false
 	weather_timer = 60.0
@@ -566,6 +572,7 @@ const ACHIEVEMENTS := [
 	{"id": "catcher", "name": "接果子高手", "desc": "在接果子小游戏里拿到 40 分", "stat": "best_catch", "target": 40, "reward": 150},
 	{"id": "lucky", "name": "幸运儿", "desc": "钓鱼时钓到一个宝箱", "stat": "treasures", "target": 1, "reward": 100},
 	{"id": "stargazer", "name": "追星的小摩尔", "desc": "对着流星许 5 个愿望", "stat": "wishes", "target": 5, "reward": 120},
+	{"id": "story", "name": "城堡的秘密", "desc": "完成主线剧情", "stat": "story_done", "target": 1, "reward": 200},
 	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
@@ -621,7 +628,7 @@ func stat_value(stat: String) -> int:
 				best = maxi(best, int(npc_affinity[k]))
 			return best
 		"hats":
-			return owned_hats.size() - 1
+			return owned_hats.filter(func(h): return h != "none" and HATS.has(h) and HATS[h].get("shop", true)).size()
 		"crop_kinds":
 			var k := 0
 			for c in CROPS:
@@ -1017,6 +1024,7 @@ func cook(dish: String) -> bool:
 		remove_item(k, int(needs[k]))
 	add_item(dish)
 	record("cook", dish)
+	story_event("cook")
 	report("cook", dish)
 	add_exp(int(DISHES[dish]["exp"]))
 	return true
@@ -1344,4 +1352,79 @@ func buy_greenhouse() -> bool:
 		return false
 	has_greenhouse = true
 	tools_changed.emit()
+	return true
+
+
+# ---------- 主线剧情「城堡的秘密」 ----------
+
+const STORY := [
+	{"text": "去城堡附近找守卫阿呆聊聊", "event": "talk_阿呆", "target": "adai",
+		"beat": ["阿呆", "嘿嘿，告诉你一个秘密：国王最近总是愁眉苦脸的，好像丢了什么重要的东西……听说他前几天在钓鱼湖边散过步。"]},
+	{"text": "在钓鱼湖钓 3 次鱼，找找国王丢的东西", "event": "fish", "count": 3, "target": "pond",
+		"beat": ["钓鱼湖", "鱼线猛地一沉——钓上来一把生锈的旧钥匙！上面刻着城堡的徽章。"]},
+	{"text": "把旧钥匙交给城堡大厅里的摩尔国王", "event": "talk_摩尔国王", "target": "castle",
+		"beat": ["摩尔国王", "这是……城堡地下室的钥匙！太谢谢你了。不过我饿得讲不动故事了，能给我做一道菜吗？"]},
+	{"text": "去广场的小厨房做一道菜", "event": "cook", "target": "stove",
+		"beat": ["小厨房", "香喷喷的菜做好了，快趁热送去给国王吧！"]},
+	{"text": "把做好的菜送给摩尔国王", "event": "talk_摩尔国王", "target": "castle",
+		"beat": ["摩尔国王", "真好吃！那我告诉你吧：很久以前，守护小镇的星星落进了钓鱼湖。只有在夜里，湖面才会映出它的光……晚上 9 点以后去湖边看看吧。"]},
+	{"text": "晚上 9 点以后去钓鱼湖边看看", "event": "night_pond", "target": "pond",
+		"beat": ["钓鱼湖", "湖面闪闪发光，一颗小星星从水里慢慢浮了上来，轻轻落在你的头上——变成了一枚星星发卡！"]},
+]
+
+signal story_changed
+signal story_beat(title: String, text: String)
+
+var story_step := -2  # -2 还没开始，0~5 进行中，-1 已完成
+var story_count := 0
+
+
+func story_active() -> bool:
+	return story_step >= 0 and story_step < STORY.size()
+
+
+## 新手引导完成并且升到 2 级后，主线自动开始
+func _maybe_start_story() -> void:
+	if story_step == -2 and not tutorial_active() and player_level >= 2:
+		story_step = 0
+		story_count = 0
+		toast.emit("新的故事开始了：「城堡的秘密」（看左上角）")
+		story_changed.emit()
+
+
+func story_text() -> String:
+	if not story_active():
+		return ""
+	var s: Dictionary = STORY[story_step]
+	var extra := "（%d/%d）" % [story_count, int(s["count"])] if s.has("count") else ""
+	return "主线「城堡的秘密」第%d章：%s%s" % [story_step + 1, s["text"], extra]
+
+
+## 剧情事件；推进了剧情（显示了剧情对话）时返回 true
+func story_event(ev: String) -> bool:
+	if not story_active():
+		return false
+	var s: Dictionary = STORY[story_step]
+	if s["event"] != ev:
+		return false
+	if s.has("count"):
+		story_count += 1
+		if story_count < int(s["count"]):
+			story_changed.emit()
+			return false
+	story_beat.emit(s["beat"][0], s["beat"][1])
+	story_step += 1
+	story_count = 0
+	if story_step >= STORY.size():
+		story_step = -1
+		if not "star_pin" in owned_hats:
+			owned_hats.append("star_pin")
+		hat = "star_pin"
+		hat_changed.emit()
+		add_beans(300)
+		add_exp(100)
+		stats["story_done"] = 1
+		toast.emit("主线「城堡的秘密」完成！获得星星发卡、300 摩尔豆和 100 经验")
+		check_achievements()
+	story_changed.emit()
 	return true

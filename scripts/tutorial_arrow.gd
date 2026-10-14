@@ -11,13 +11,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
-	visible = GameState.tutorial_active() and main != null and not main.inside
+	var on := GameState.tutorial_active() or GameState.story_active()
+	visible = on and main != null and (not main.inside or (main.room == "castle" and _story_key() == "castle"))
 	if visible:
 		queue_redraw()
 
 
+func _story_key() -> String:
+	return GameState.STORY[GameState.story_step]["target"] if not GameState.tutorial_active() and GameState.story_active() else ""
+
+
 func target_position() -> Vector2:
-	var key: String = GameState.TUTORIAL[GameState.tutorial_step]["target"]
+	var key: String = GameState.TUTORIAL[GameState.tutorial_step]["target"] if GameState.tutorial_active() else _story_key()
 	match key:
 		"farm":
 			# 优先指向第一块空地（第一步）或者刚种下的作物（第二步）
@@ -31,6 +36,16 @@ func target_position() -> Vector2:
 			for n in get_tree().get_nodes_in_group("npcs"):
 				if (key == "shop" and n.role == "shop") or (key == "lele" and n.role == "lele"):
 					return n.position
+		"adai", "castle":
+			for n in get_tree().get_nodes_in_group("npcs"):
+				if (key == "adai" and n.display_name == "阿呆") or (key == "castle" and n.role == "king" and main.inside):
+					return n.position
+			if key == "castle":
+				return Vector2(1200, 330)
+		"stove":
+			var st = get_tree().get_first_node_in_group("stove")
+			if st != null:
+				return st.position
 		"lahm":
 			var lahm = get_tree().get_first_node_in_group("my_lahm")
 			if lahm != null:

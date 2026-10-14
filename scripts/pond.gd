@@ -39,6 +39,8 @@ func get_interact_point() -> Vector2:
 
 
 func interact(_pl) -> void:
+	if GameState.minutes >= 21.0 * 60.0 or GameState.minutes < 5.0 * 60.0:
+		GameState.story_event("night_pond")
 	get_tree().call_group("ui", "start_fishing", position)
 
 

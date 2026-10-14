@@ -247,6 +247,14 @@ func _draw_hat(b: Vector2) -> void:
 			draw_colored_polygon(PackedVector2Array([b + Vector2(-13, 0), b + Vector2(13, 0), b + Vector2(facing * 10.0, -34)]), Color(0.45, 0.25, 0.75))
 			for sp in [Vector2(-4, -8), Vector2(4, -18), Vector2(-1, -26)]:
 				draw_circle(b + sp + Vector2(facing * sp.y * -0.2, 0), 2.0, Color(1, 0.9, 0.3))
+		"star_pin":
+			var sc := b + Vector2(12, 2)
+			var star := PackedVector2Array()
+			for i in 10:
+				var a := -PI / 2.0 + TAU * i / 10.0
+				star.append(sc + Vector2(cos(a), sin(a)) * (8.0 if i % 2 == 0 else 3.5))
+			draw_colored_polygon(star, Color(1, 0.88, 0.2))
+			draw_circle(sc, 2.0, Color(1, 1, 0.8))
 		"crown":
 			var pts := PackedVector2Array([b + Vector2(-13, 2), b + Vector2(13, 2), b + Vector2(14, -14),
 				b + Vector2(7, -6), b + Vector2(0, -17), b + Vector2(-7, -6), b + Vector2(-14, -14)])

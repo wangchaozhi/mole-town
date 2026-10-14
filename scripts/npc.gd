@@ -88,4 +88,7 @@ func interact(pl) -> void:
 		facing = signf(dx)
 	if sleeping:
 		say("唔……好困……谁呀？")
+	if GameState.story_event("talk_" + display_name):
+		play_emote("happy")
+		return  # 剧情对话代替平常的对话
 	get_tree().call_group("ui", "on_npc_interact", self)

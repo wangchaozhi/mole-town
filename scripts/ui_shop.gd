@@ -111,6 +111,8 @@ func populate() -> void:
 			for id in GameState.HATS:
 				var h: Dictionary = GameState.HATS[id]
 				var owned: bool = id in GameState.owned_hats
+				if not h.get("shop", true) and not owned:
+					continue  # 剧情奖励的帽子不在商店卖
 				var wearing: bool = GameState.hat == id
 				var label := "%s%s" % [h["name"], "" if owned else "   %d豆" % h["price"]]
 				if wearing:

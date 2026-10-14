@@ -27,6 +27,7 @@ var lahm_info: Label
 var fest_label: Label
 var tut_box: HBoxContainer
 var tut_label: Label
+var story_label: Label
 var level_label: Label
 var exp_bar: ProgressBar
 var seed_buttons := {}
@@ -245,8 +246,17 @@ func _build_hud() -> void:
 	skip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	tut_box.add_child(skip)
 	v.add_child(tut_box)
+	story_label = _label("", 14)
+	story_label.add_theme_color_override("font_color", Color(0.45, 0.25, 0.7))
+	story_label.custom_minimum_size = Vector2(260, 0)
+	story_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	v.add_child(story_label)
+	GameState.story_changed.connect(_refresh_story)
+	GameState.story_beat.connect(func(title, text): show_dialog(title, text, [["继续", _noop]]))
 	GameState.tutorial_changed.connect(_refresh_tutorial)
 	_refresh_tutorial()
+	_refresh_story()
+	GameState.tutorial_changed.connect(_refresh_story)
 	online_label = _label("", 14)
 	online_label.add_theme_color_override("font_color", Color(0.15, 0.5, 0.8))
 	v.add_child(online_label)
@@ -931,6 +941,7 @@ func _reel() -> void:
 		_fish_end("拉得太早了，鱼被吓跑了！")
 	elif fish_phase == 1:
 		if fish_marker >= fish_zone.x and fish_marker <= fish_zone.x + fish_zone.y:
+			GameState.story_event("fish")
 			var lucky := randf()
 			if lucky < 0.03:
 				_fish_treasure()
@@ -1287,3 +1298,8 @@ func _next_badge() -> void:
 		badge.visible = false
 		badge_busy = false
 		_next_badge())
+
+
+func _refresh_story() -> void:
+	story_label.text = GameState.story_text()
+	story_label.visible = story_label.text != "" and not GameState.tutorial_active()

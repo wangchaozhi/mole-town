@@ -348,6 +348,15 @@ func _run() -> void:
 	await get_tree().create_timer(1.5).timeout
 	check(get_tree().get_nodes_in_group("lost_lahm").is_empty() and GameState.affinity("乐乐") == aff0 + 10, "把小拉姆送回乐乐那里")
 
+	print("[主线剧情]")
+	GameState.story_step = 0
+	GameState.story_count = 0
+	for story_ev in ["talk_阿呆", "fish", "fish", "fish", "talk_摩尔国王", "cook", "talk_摩尔国王", "night_pond"]:
+		GameState.story_event(story_ev)
+	check(GameState.story_step == -1 and "star_pin" in GameState.owned_hats and "story" in GameState.achievements, "主线剧情走完：拿到星星发卡和成就")
+	check(not GameState.story_event("fish"), "剧情完成后不再响应剧情事件")
+	ui._close_all()
+
 	print("[界面大小]")
 	ui.set_ui_scale(1.3)
 	var vs: Vector2 = get_viewport().get_visible_rect().size
