@@ -33,6 +33,10 @@ var seed_buttons := {}
 var toast_label: Label
 var toast_timer := 0.0
 var toast_queue: Array = []
+var badge: PanelContainer
+var badge_name: Label
+var badge_queue: Array = []
+var badge_busy := false
 var dialog_panel: PanelContainer
 var dialog_name: Label
 var dialog_text: Label
@@ -117,6 +121,8 @@ func _ready() -> void:
 	mailui.build()
 	_build_help()
 	_build_toast()
+	_build_badge()
+	GameState.achievement_unlocked.connect(func(a): badge_queue.append(a); _next_badge())
 	Net.status_changed.connect(func(_t): _refresh_net())
 	Net.roster_changed.connect(_refresh_net)
 	_refresh_net()
@@ -1218,3 +1224,66 @@ func _fish_bottle() -> void:
 	Sfx.play("gift")
 	_fish_end("钓到一个漂流瓶！里面的纸条写着：")
 	show_dialog("漂流瓶", "「%s」\n—— %s\n\n瓶子里还有 %d 摩尔豆。" % [note, who, gift], [["收好", _noop]])
+
+
+# ---------- 成就徽章 ----------
+
+func _build_badge() -> void:
+	badge = PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1, 0.92, 0.6)
+	sb.border_color = Color(0.85, 0.55, 0.1)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(16)
+	sb.set_content_margin_all(10)
+	sb.shadow_color = Color(0, 0, 0, 0.3)
+	sb.shadow_size = 6
+	badge.add_theme_stylebox_override("panel", sb)
+	_place(badge, [0.5, 0, 0.5, 0], [0, 120, 0, 120])
+	badge.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	badge.add_child(hb)
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2(52, 52)
+	icon.draw.connect(func():
+		var c := Vector2(26, 26)
+		icon.draw_circle(c, 25.0, Color(0.95, 0.65, 0.15))
+		icon.draw_circle(c, 21.0, Color(1, 0.85, 0.3))
+		var gold := Color(0.85, 0.5, 0.05)
+		icon.draw_colored_polygon(PackedVector2Array([c + Vector2(-11, -12), c + Vector2(11, -12), c + Vector2(7, 2), c + Vector2(-7, 2)]), gold)
+		icon.draw_rect(Rect2(c + Vector2(-2, 2), Vector2(4, 7)), gold)
+		icon.draw_rect(Rect2(c + Vector2(-8, 9), Vector2(16, 4)), gold))
+	hb.add_child(icon)
+	var v := VBoxContainer.new()
+	var t := _label("成就达成！", 14)
+	t.add_theme_color_override("font_color", Color(0.7, 0.4, 0.05))
+	v.add_child(t)
+	badge_name = _label("", 22)
+	v.add_child(badge_name)
+	hb.add_child(v)
+	badge.visible = false
+
+
+func _next_badge() -> void:
+	if badge_busy or badge_queue.is_empty():
+		return
+	badge_busy = true
+	var a: Dictionary = badge_queue.pop_front()
+	badge_name.text = "%s   +%d 摩尔豆" % [a["name"], int(a["reward"])]
+	badge.visible = true
+	badge.reset_size()
+	badge.offset_left = -badge.size.x / 2.0
+	badge.offset_right = badge.size.x / 2.0
+	badge.modulate.a = 0.0
+	badge.offset_top = 90
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(badge, "modulate:a", 1.0, 0.3)
+	tw.tween_property(badge, "offset_top", 120.0, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(2.4)
+	tw.chain().tween_property(badge, "modulate:a", 0.0, 0.4)
+	tw.chain().tween_callback(func():
+		badge.visible = false
+		badge_busy = false
+		_next_badge())

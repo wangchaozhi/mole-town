@@ -638,7 +638,6 @@ func check_achievements() -> void:
 			continue
 		if stat_value(a["stat"]) >= int(a["target"]):
 			achievements.append(a["id"])
-			toast.emit("成就达成：%s！奖励 %d 摩尔豆" % [a["name"], a["reward"]])
 			Sfx.play("catch")
 			achievement_unlocked.emit(a)
 			add_beans(int(a["reward"]))
