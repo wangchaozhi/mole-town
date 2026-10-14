@@ -56,6 +56,7 @@ func _build_settings() -> void:
 	hb.add_child(warn)
 	hb.add_child(ui._button("重置存档", _confirm_reset))
 	v.add_child(hb)
+	v.add_child(ui._button("关于摩尔小镇", _about))
 	v.add_child(ui._button("修改形象（名字、毛色）", func():
 		settings_panel.visible = false
 		open_creator()))
@@ -237,3 +238,16 @@ func _finish_creator() -> void:
 	ui.show_toast("你好，%s！欢迎来到摩尔小镇~" % n)
 
 
+
+
+func _about() -> void:
+	settings_panel.visible = false
+	var ver := str(ProjectSettings.get_setting("application/config/version", "dev"))
+	var st: Dictionary = GameState.stats
+	ui.show_dialog("关于摩尔小镇 v%s" % ver,
+		"一个用 Godot 4 写的摩尔庄园风格小游戏：所有画面和音乐都由代码生成，支持局域网联机。\n" +
+		"你已经在小镇度过了 %d 天，等级 Lv%d，收获 %d 个作物、钓到 %d 条鱼、做了 %d 道菜，解锁了 %d 个成就。\n" % [
+			GameState.day, GameState.player_level, int(st.get("harvest_total", 0)), int(st.get("fish_total", 0)),
+			int(st.get("cook_total", 0)), GameState.achievements.size()] +
+		"项目地址：github.com/wangchaozhi/mole-town",
+		[["打开项目主页", func(): OS.shell_open("https://github.com/wangchaozhi/mole-town")], ["好的", ui._noop]])
