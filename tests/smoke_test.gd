@@ -172,7 +172,7 @@ func _run() -> void:
 	gv.spawn_timer = 99.0
 	gv.fruits = [{"pos": Vector2(gv.basket_x, gv.H - 70), "speed": 200.0, "kind": "gold"}]
 	gv.time_left = 0.5
-	await _frames(40)
+	await get_tree().create_timer(1.0).timeout  # 无头模式帧很快，按真实时间等
 	check(not gv.active and gv.score == 5 and GameState.best_catch >= 5, "接到金果子 +5 并结算")
 	ui._close_minigame()
 	check(not GameState.input_locked, "离开小游戏解锁移动")
