@@ -58,6 +58,7 @@ var emote_bar: PanelContainer
 var collection_panel: PanelContainer
 var collection_body: VBoxContainer
 var signin_panel: PanelContainer
+var minimap_panel: PanelContainer
 var signin_cards: HBoxContainer
 var signin_button: Button
 var signin_info: Label
@@ -99,6 +100,7 @@ func _ready() -> void:
 	_build_creator()
 	_build_collection()
 	_build_signin()
+	_build_minimap()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -539,14 +541,15 @@ func _build_help() -> void:
 	l.custom_minimum_size = Vector2(600, 0)
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	l.text = "• 鼠标左键点击地面走路，点击人物 / 物体互动；也可以用 WASD / 方向键走路，按 F 和身边的东西互动\n" \
-		+ "• 开心农场（右下）：在底部选好种子，点空地播种；点作物浇水（生长加速）；成熟后点击收获；有虫子时点击抓虫\n" \
+		+ "• 开心农场（右下）：在右下角的种子栏选好种子，点空地播种（新作物随等级解锁）；点作物浇水（生长加速）；成熟后点击收获；有虫子时点击抓虫\n" \
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
 		+ "• 拉姆：你的小宠物，饿了会飞不动，点击它喂食，吃饱了点击是摸摸它；亲密度升级后会帮你抓虫、找宝物、浇水\n" \
 		+ "• 联机：按 N，一人「创建房间」，其他人填房主 IP 后「加入房间」，就能看到彼此、聊天、送摩尔豆\n" \
 		+ "• 串门：点击其他玩家选「去TA家农场串门」，帮好友浇水、抓虫能拿摩尔豆，成熟的作物还能摘一个；点顶部「回家」返回\n" \
-		+ "• 快捷键：回车 聊天，B 背包，N 联机，H 帮助，Esc 关闭窗口\n" \
+		+ "• 右上角小地图：点击任意位置直接传送过去\n" \
+		+ "• 快捷键：回车 聊天，E 表情，F 互动，C 图鉴，M 小地图，B 背包，N 联机，H 帮助，Esc 关闭窗口\n" \
 		+ "• 游戏每 30 秒自动保存，离线时农场里的作物也会继续生长"
 	v.add_child(l)
 	var hb := HBoxContainer.new()
@@ -713,6 +716,8 @@ func _input(event) -> void:
 				player.interact_nearest()
 		KEY_C:
 			toggle_collection()
+		KEY_M:
+			minimap_panel.visible = not minimap_panel.visible
 		KEY_H:
 			help_panel.visible = not help_panel.visible
 		KEY_ESCAPE:
@@ -1483,3 +1488,23 @@ func _furniture_rows() -> void:
 			_shop_row(info, [["购买", _buy.bind("furn_" + id, int(f["price"]), 1)]])
 		else:
 			_shop_row(info, [["Lv%d 解锁" % int(f["level"]), _noop, true]])
+
+
+# ---------- 小地图 ----------
+
+func _build_minimap() -> void:
+	minimap_panel = _panel()
+	var sb: StyleBoxFlat = minimap_panel.get_theme_stylebox("panel").duplicate()
+	sb.set_content_margin_all(5)
+	minimap_panel.add_theme_stylebox_override("panel", sb)
+	_place(minimap_panel, [1, 0, 1, 0], [-12, 60, -12, 60], true)
+	minimap_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	minimap_panel.add_child(v)
+	var mm = preload("res://scripts/minimap.gd").new()
+	mm.main = get_parent()
+	v.add_child(mm)
+	var tip := _label("点击地图传送 · M 键隐藏", 12)
+	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(tip)

@@ -497,3 +497,28 @@ func store_furniture(i: int) -> void:
 	GameState.add_item("furn_" + str(f["id"]))
 	GameState.toast.emit("%s 收进背包了" % GameState.FURNITURE[f["id"]]["name"])
 	_build_home(GameState.home, false)
+
+
+# ---------- 传送 ----------
+
+func teleport(p: Vector2) -> void:
+	if ui.fishing:
+		return
+	cancel_placing()
+	p.x = clampf(p.x, player.world_rect.position.x, player.world_rect.end.x)
+	p.y = clampf(p.y, player.world_rect.position.y, player.world_rect.end.y)
+	if pond.contains(p):
+		p = pond.edge_point(p)
+	player.position = p
+	player.target = p
+	player.moving = false
+	player.pending = null
+	for c in player.get_children():
+		if c is Camera2D:
+			c.reset_smoothing()
+	var lahm = get_tree().get_first_node_in_group("my_lahm")
+	if lahm != null:
+		lahm.position = p + Vector2(-50, 6)
+	fx.pop(p)
+	Sfx.play("door")
+	player.play_emote("happy")
