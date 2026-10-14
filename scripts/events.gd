@@ -20,6 +20,7 @@ var last_hour := -1
 
 func _ready() -> void:
 	layer = 2
+	last_hour = int(GameState.minutes / 60.0)  # 进游戏的那一刻不算“整点到了”，避免一开局就触发事件
 	canvas = Node2D.new()
 	canvas.draw.connect(_draw_sky)
 	add_child(canvas)

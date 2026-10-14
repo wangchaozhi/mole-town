@@ -115,7 +115,7 @@ func _ready() -> void:
 	lahm.position = player.position + Vector2(-60, 0)
 	ysort.add_child(lahm)
 
-	_spawn_npc("乐乐", "lele", Vector2(1040, 790), "flower", Color(0.66, 0.46, 0.33),
+	_spawn_npc("乐乐", "lele", Vector2(1095, 805), "flower", Color(0.66, 0.46, 0.33),
 		["有空来找我领任务哦~", "今天天气真好呀！", "小摩尔们都好勤劳~"])
 	_spawn_npc("店长豆豆", "shop", Vector2(1750, 545), "straw", Color(0.52, 0.36, 0.24),
 		["欢迎光临摩尔百货！", "新到的小王冠，要看看吗？", "种子大减价啦~"])
@@ -381,7 +381,11 @@ func _build_props() -> void:
 	while x < 2400.0:
 		if absf(x - 1200.0) > 360.0:
 			_prop("pine" if rng.randf() < 0.4 else "tree", Vector2(x + rng.randf_range(-20, 20), 120 + rng.randf_range(-10, 25)))
-		_prop("pine" if rng.randf() < 0.4 else "tree", Vector2(x + rng.randf_range(-20, 20), 1390 + rng.randf_range(-10, 10)))
+		# 随机数按原来的顺序取，保证其它树的位置不变；只是小院正下方不种树（会挡住小院）
+		var bk := "pine" if rng.randf() < 0.4 else "tree"
+		var bp := Vector2(x + rng.randf_range(-20, 20), 1390 + rng.randf_range(-10, 10))
+		if bp.x < 1080.0 or bp.x > 1500.0:
+			_prop(bk, bp)
 		x += 140.0
 	var y := 260.0
 	while y < 1350.0:
@@ -392,7 +396,7 @@ func _build_props() -> void:
 			Vector2(2230, 760), Vector2(2200, 330), Vector2(1500, 260), Vector2(880, 260), Vector2(420, 1300)]:
 		_prop("tree", p)
 	for p in [Vector2(450, 620), Vector2(900, 380), Vector2(1550, 380), Vector2(2000, 620),
-			Vector2(1500, 800), Vector2(300, 950), Vector2(2200, 1100)]:
+			Vector2(1500, 800), Vector2(300, 950)]:
 		_prop("bush", p)
 
 
