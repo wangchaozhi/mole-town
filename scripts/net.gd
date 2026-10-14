@@ -8,12 +8,19 @@ signal roster_changed
 signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool)
 signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
+signal visit_changed
+signal farm_visitor_joined(id: int)
+signal farm_received(states: Array)
+signal farm_action_requested(id: int, plot_id: int, action: String)
+signal farm_action_result(msg: String, item: String, beans: int)
 
 const DEFAULT_PORT := 7777
 const MAX_PLAYERS := 16
 
 var players: Dictionary = {}  # peer_id -> {"name", "hat", "color"}
 var status := "单机模式"
+var visiting := 0  # 正在串门的农场主人 id，0 = 在自己家
+var visitors := {}  # 正在我家农场做客的玩家 id
 
 
 func _ready() -> void:
@@ -77,6 +84,10 @@ func leave() -> void:
 		peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
+	visitors.clear()
+	if visiting != 0:
+		visiting = 0
+		visit_changed.emit()
 	roster_changed.emit()
 	_set_status("单机模式")
 
@@ -136,6 +147,10 @@ func sync_roster(p: Dictionary) -> void:
 	players = {}
 	for id in p:
 		players[int(id)] = _clean(p[id])
+	if visiting != 0 and not players.has(visiting):
+		visiting = 0
+		visit_changed.emit()
+		GameState.toast.emit("农场主人离开了，你回到了自己家")
 	roster_changed.emit()
 
 
@@ -185,3 +200,79 @@ func send_gift(id: int, beans: int) -> void:
 @rpc("any_peer", "call_remote", "reliable")
 func gift(beans: int) -> void:
 	gift_received.emit(multiplayer.get_remote_sender_id(), clampi(beans, 0, 1000))
+
+
+# ---------- 串门 ----------
+# 农场主人的农田才是真实数据：做客的人只显示主人推送来的状态，操作也发给主人执行。
+
+func visit(owner: int) -> void:
+	if not is_online() or not players.has(owner) or owner == my_id():
+		return
+	if visiting != 0 and visiting != owner:
+		stop_visit.rpc_id(visiting)
+	visiting = owner
+	request_farm.rpc_id(owner)
+	visit_changed.emit()
+
+
+func leave_farm() -> void:
+	if visiting == 0:
+		return
+	if is_online():
+		stop_visit.rpc_id(visiting)
+	visiting = 0
+	visit_changed.emit()
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func request_farm() -> void:
+	var id := multiplayer.get_remote_sender_id()
+	visitors[id] = true
+	farm_visitor_joined.emit(id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func stop_visit() -> void:
+	visitors.erase(multiplayer.get_remote_sender_id())
+
+
+func push_farm(states: Array) -> void:
+	if not is_online():
+		visitors.clear()
+		return
+	for id in visitors.keys():
+		if players.has(id):
+			farm_state.rpc_id(id, states)
+		else:
+			visitors.erase(id)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func farm_state(states: Array) -> void:
+	if multiplayer.get_remote_sender_id() == visiting:
+		farm_received.emit(states)
+
+
+func send_farm_action(plot_id: int, action: String) -> void:
+	if visiting != 0 and is_online():
+		farm_action.rpc_id(visiting, plot_id, action)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func farm_action(plot_id: int, action: String) -> void:
+	var id := multiplayer.get_remote_sender_id()
+	if visitors.has(id):
+		farm_action_requested.emit(id, plot_id, action)
+
+
+func reply_farm_action(id: int, msg: String, item: String, beans: int) -> void:
+	farm_action_reply.rpc_id(id, msg, item, beans)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func farm_action_reply(msg: String, item: String, beans: int) -> void:
+	if multiplayer.get_remote_sender_id() != visiting:
+		return
+	if not GameState.CROPS.has(item):
+		item = ""
+	farm_action_result.emit(str(msg).left(40), item, clampi(beans, 0, 5))

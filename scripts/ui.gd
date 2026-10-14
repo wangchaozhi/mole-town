@@ -49,6 +49,8 @@ var ip_edit: LineEdit
 var port_edit: LineEdit
 var net_status: Label
 var net_list: Label
+var visit_bar: PanelContainer
+var visit_label: Label
 
 var fishing := false
 var fish_phase := 0  # 0 等待 1 上钩 2 结束
@@ -74,6 +76,7 @@ func _ready() -> void:
 	_build_bag()
 	_build_fish()
 	_build_net()
+	_build_visit_bar()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -338,11 +341,42 @@ func _refresh_net() -> void:
 
 
 func on_remote_interact(m) -> void:
+	var visit_opt: Array = ["回自己家", Net.leave_farm] if Net.visiting == m.peer_id else ["去TA家农场串门", _visit.bind(m)]
 	show_dialog(m.display_name, "这是来自远方的小摩尔「%s」！" % m.display_name, [
 		["打招呼", _greet.bind(m)],
+		visit_opt,
 		["送 10 摩尔豆", _send_gift.bind(m)],
 		["再见", _noop],
 	])
+
+
+func _visit(m) -> void:
+	Net.visit(m.peer_id)
+	_on_chat("我来你家农场串门啦~")
+
+
+func _build_visit_bar() -> void:
+	visit_bar = _panel()
+	_place(visit_bar, [0.5, 0, 0.5, 0], [0, 12, 0, 12], true)
+	visit_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	visit_bar.add_child(hb)
+	visit_label = _label("", 17)
+	visit_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(visit_label)
+	hb.add_child(_button("回家", Net.leave_farm))
+	visit_bar.visible = false
+	Net.visit_changed.connect(_refresh_visit)
+
+
+func _refresh_visit() -> void:
+	visit_bar.visible = Net.visiting != 0
+	if Net.visiting != 0:
+		visit_label.text = "正在「%s」家农场做客" % Net.player_name(Net.visiting)
+		show_toast("帮好友浇水、抓虫能拿摩尔豆，成熟的作物可以摘一个~")
+	else:
+		show_toast("回到了自己的农场")
 
 
 func _greet(m) -> void:
@@ -467,6 +501,7 @@ func _build_help() -> void:
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
 		+ "• 拉姆：你的小宠物，饿了会飞不动，点击它喂食\n" \
 		+ "• 联机：按 N，一人「创建房间」，其他人填房主 IP 后「加入房间」，就能看到彼此、聊天、送摩尔豆\n" \
+		+ "• 串门：点击其他玩家选「去TA家农场串门」，帮好友浇水、抓虫能拿摩尔豆，成熟的作物还能摘一个；点顶部「回家」返回\n" \
 		+ "• 快捷键：回车 聊天，B 背包，N 联机，H 帮助，Esc 关闭窗口\n" \
 		+ "• 游戏每 30 秒自动保存，离线时农场里的作物也会继续生长"
 	v.add_child(l)

@@ -12,6 +12,8 @@ const UI = preload("res://scripts/ui.gd")
 const RemoteMole = preload("res://scripts/remote_mole.gd")
 
 var remotes := {}  # peer_id -> 远程玩家节点
+var plots := []
+var farm_sign
 var ysort: Node2D
 var player
 var pond
@@ -110,6 +112,69 @@ func _ready() -> void:
 	add_child(sync)
 	_on_roster_changed()
 
+	# 串门
+	Net.visit_changed.connect(_on_visit_changed)
+	Net.farm_visitor_joined.connect(_on_farm_visitor)
+	Net.farm_received.connect(_on_farm_received)
+	Net.farm_action_requested.connect(_on_farm_action_requested)
+	Net.farm_action_result.connect(_on_farm_action_result)
+	var farm_sync := Timer.new()
+	farm_sync.wait_time = 1.0
+	farm_sync.autostart = true
+	farm_sync.timeout.connect(func():
+		if not Net.visitors.is_empty():
+			Net.push_farm(_farm_states()))
+	add_child(farm_sync)
+
+
+func _farm_states() -> Array:
+	var out := []
+	for p in plots:
+		out.append(p.get_state())
+	return out
+
+
+func _on_visit_changed() -> void:
+	if Net.visiting == 0:
+		for p in plots:
+			p.clear_remote()
+		farm_sign.text = "开心农场"
+	else:
+		for p in plots:
+			p.set_remote({})  # 收到主人数据前先显示空地
+		farm_sign.text = "%s的农场" % Net.player_name(Net.visiting)
+		player.position = Vector2(1845, 1240)
+		player.target = player.position
+		player.moving = false
+		player.pending = null
+	farm_sign.queue_redraw()
+
+
+func _on_farm_visitor(id: int) -> void:
+	GameState.toast.emit("%s 来你的农场串门啦！" % Net.player_name(id))
+	Net.push_farm(_farm_states())
+
+
+func _on_farm_received(states: Array) -> void:
+	for i in mini(states.size(), plots.size()):
+		plots[i].set_remote(states[i])
+
+
+func _on_farm_action_requested(id: int, plot_id: int, action: String) -> void:
+	if plot_id < 0 or plot_id >= plots.size():
+		return
+	var r: Array = plots[plot_id].remote_action(action, Net.player_name(id))
+	Net.reply_farm_action(id, r[0], r[1], r[2])
+	Net.push_farm(_farm_states())
+
+
+func _on_farm_action_result(msg: String, item: String, beans: int) -> void:
+	if item != "":
+		GameState.add_item(item)
+	if beans > 0:
+		GameState.add_beans(beans)
+	GameState.toast.emit(msg)
+
 
 func _on_roster_changed() -> void:
 	var me := Net.my_id()
@@ -149,13 +214,14 @@ func _on_gift(id: int, beans: int) -> void:
 	GameState.toast.emit("%s 送给你 %d 摩尔豆！" % [Net.player_name(id), beans])
 
 
-func _prop(kind: String, pos: Vector2, text: String = "", size: Vector2 = Vector2.ZERO) -> void:
+func _prop(kind: String, pos: Vector2, text: String = "", size: Vector2 = Vector2.ZERO) -> Node2D:
 	var p = Prop.new()
 	p.kind = kind
 	p.position = pos
 	p.text = text
 	p.size = size
 	ysort.add_child(p)
+	return p
 
 
 func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, lines: Array) -> void:
@@ -176,7 +242,7 @@ func _build_props() -> void:
 	_prop("shop", Vector2(1750, 480), "摩尔百货")
 	for p in [Vector2(1030, 560), Vector2(1370, 560), Vector2(1030, 890), Vector2(1370, 890)]:
 		_prop("lamp", p)
-	_prop("sign", Vector2(1700, 1265), "开心农场")
+	farm_sign = _prop("sign", Vector2(1700, 1265), "开心农场")
 	_prop("sign", Vector2(860, 1110), "钓鱼湖")
 	_prop("sign", Vector2(960, 700), "城堡广场")
 	_prop("flowers", Vector2(500, 520))
@@ -219,6 +285,7 @@ func _build_farm() -> void:
 			plot.plot_id = r * 4 + c
 			plot.position = Vector2(1700 + c * 105, 960 + r * 82)
 			ysort.add_child(plot)
+			plots.append(plot)
 
 
 func _unhandled_input(event: InputEvent) -> void:
