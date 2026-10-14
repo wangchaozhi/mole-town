@@ -84,3 +84,16 @@ godot --headless --path . res://tests/smoke_test.tscn -- --profile=smoke
 ```
 
 测试使用单独的 `smoke` 存档档位，结束后会自动删除，不影响正常存档。
+
+## 打包分享（导出 Windows 版）
+
+项目里已经带了 Windows 导出预设，导出后的 exe 不需要安装 Godot，可以直接发给小伙伴一起联机。
+
+1. 第一次导出前，在 Godot 编辑器里点「编辑器 → 管理导出模板 → 下载并安装」（约 1 GB，只需一次）。
+2. 在编辑器里点「项目 → 导出 → Windows Desktop → 导出项目」，或者用命令行：
+
+```bash
+godot --headless --path . --export-release "Windows Desktop" build/mole_town.exe
+```
+
+导出的文件在 `build/` 文件夹里（已加入 .gitignore，不会提交）。
