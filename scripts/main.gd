@@ -148,9 +148,7 @@ func _ready() -> void:
 	Net.peer_chat.connect(_on_peer_chat)
 	Net.gift_received.connect(_on_gift)
 	Net.item_received.connect(_on_item_gift)
-	Net.peer_emote.connect(func(id, kind):
-		if remotes.has(id):
-			remotes[id].play_emote(kind))
+	Net.peer_emote.connect(_on_peer_emote)
 	if not GameState.hat_changed.is_connected(Net.send_info):
 		GameState.hat_changed.connect(Net.send_info)
 	var sync := Timer.new()
@@ -804,3 +802,54 @@ func _build_castle_hall() -> void:
 func castle_gate() -> void:
 	ui.show_dialog("摩尔城堡", "城堡大门开着，里面传来国王的笑声。要做什么呢？",
 		[["进入城堡", enter_room.bind("castle")], ["玩接果子小游戏", ui.open_minigame_intro], ["离开", ui._noop]])
+
+
+# ---------- 一起跳舞 ----------
+# 附近的好友在 3 秒内做了同一个表情，双方各自判定“合拍”，都会得到奖励（20 秒冷却）
+
+const DANCE_RANGE := 220.0
+const DANCE_WINDOW := 3.0
+
+var my_emote := ""
+var my_emote_t := -100.0
+var dance_cooldown_until := 0.0
+
+
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+
+func _on_peer_emote(id: int, kind: String) -> void:
+	if not remotes.has(id):
+		return
+	var r = remotes[id]
+	r.play_emote(kind)
+	r.set_meta("emote_kind", kind)
+	r.set_meta("emote_t", _now())
+	if kind == my_emote and _now() - my_emote_t < DANCE_WINDOW:
+		_try_dance(r)
+
+
+## 自己做了表情（ui.do_emote 调用）
+func on_local_emote(kind: String) -> void:
+	my_emote = kind
+	my_emote_t = _now()
+	for r in remotes.values():
+		if r.get_meta("emote_kind", "") == kind and _now() - float(r.get_meta("emote_t", -100.0)) < DANCE_WINDOW:
+			_try_dance(r)
+			return
+
+
+func _try_dance(r) -> void:
+	if _now() < dance_cooldown_until or not r.visible or r.position.distance_to(player.position) > DANCE_RANGE:
+		return
+	dance_cooldown_until = _now() + 20.0
+	GameState.add_beans(5)
+	GameState.stats["dances"] = int(GameState.stats.get("dances", 0)) + 1
+	GameState.check_achievements()
+	GameState.toast.emit("和 %s 一起跳舞，太合拍啦！+5 摩尔豆" % r.display_name)
+	Sfx.play("happy")
+	player.play_emote("happy")
+	var lahm = get_tree().get_first_node_in_group("my_lahm")
+	if lahm != null:
+		lahm._burst()

@@ -578,6 +578,7 @@ const ACHIEVEMENTS := [
 	{"id": "lucky", "name": "幸运儿", "desc": "钓鱼时钓到一个宝箱", "stat": "treasures", "target": 1, "reward": 100},
 	{"id": "stargazer", "name": "追星的小摩尔", "desc": "对着流星许 5 个愿望", "stat": "wishes", "target": 5, "reward": 120},
 	{"id": "story", "name": "城堡的秘密", "desc": "完成主线剧情", "stat": "story_done", "target": 1, "reward": 200},
+	{"id": "dancer", "name": "舞林高手", "desc": "和好友一起合拍地做 5 次表情", "stat": "dances", "target": 5, "reward": 150},
 	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
