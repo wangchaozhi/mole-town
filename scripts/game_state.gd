@@ -79,6 +79,10 @@ var player_name := ""
 var body_color := ""
 var is_new_player := false  # 第一次进入游戏（还没有存档）
 var help_today: int = 0  # 今天串门帮忙已领奖励的次数
+var best_catch: int = 0  # 接果子最高分
+var catch_day: int = -1
+var catch_plays: int = 0  # 今天已领奖的小游戏次数
+var input_locked := false  # 小游戏进行中时禁止角色移动
 var collection: Dictionary = {}  # 物品 id -> 累计获得数量（图鉴）
 var stats: Dictionary = {}  # harvest_total / fish_total / help_total / visits
 var achievements: Array = []  # 已解锁的成就 id
@@ -253,7 +257,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "best_catch": best_catch, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -289,6 +293,9 @@ func load_game() -> bool:
 	quest = data.get("quest", {})
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
+	best_catch = int(data.get("best_catch", 0))
+	catch_day = int(data.get("catch_day", -1))
+	catch_plays = int(data.get("catch_plays", 0))
 	collection = {}
 	var col: Dictionary = data.get("collection", {})
 	for k in col:
@@ -467,6 +474,7 @@ const ACHIEVEMENTS := [
 	{"id": "lahm_friend", "name": "拉姆的好朋友", "desc": "把拉姆培养到 5 级", "stat": "lahm_level", "target": 5, "reward": 300},
 	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
 	{"id": "popular", "name": "小镇人气王", "desc": "和一位 NPC 成为好朋友（好感 100）", "stat": "max_affinity", "target": 100, "reward": 200},
+	{"id": "catcher", "name": "接果子高手", "desc": "在接果子小游戏里拿到 40 分", "stat": "best_catch", "target": 40, "reward": 150},
 ]
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
@@ -506,6 +514,8 @@ func stat_value(stat: String) -> int:
 			return lahm_level
 		"player_level":
 			return player_level
+		"best_catch":
+			return best_catch
 		"max_affinity":
 			var best := 0
 			for k in npc_affinity:
@@ -747,3 +757,31 @@ func gift_npc(npc: String, item: String) -> Dictionary:
 	add_exp(3)
 	check_achievements()
 	return {"ok": true, "liked": liked, "gain": gain, "rewards": rewards}
+
+
+# ---------- 接果子小游戏 ----------
+
+const CATCH_REWARD_PLAYS := 3  # 每个游戏日前 3 次有奖励
+
+
+func catch_plays_left() -> int:
+	return CATCH_REWARD_PLAYS - (catch_plays if catch_day == day else 0)
+
+
+## 小游戏结束：返回 [摩尔豆, 经验, 是否新纪录]
+func finish_catch(score: int) -> Array:
+	var record := score > best_catch
+	best_catch = maxi(best_catch, score)
+	var beans_ := 0
+	var exp_ := 0
+	if catch_plays_left() > 0:
+		if catch_day != day:
+			catch_day = day
+			catch_plays = 0
+		catch_plays += 1
+		beans_ = mini(score * 2, 120)
+		exp_ = score / 4
+		add_beans(beans_)
+		add_exp(exp_)
+	check_achievements()
+	return [beans_, exp_, record]

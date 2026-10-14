@@ -60,6 +60,10 @@ var collection_body: VBoxContainer
 var signin_panel: PanelContainer
 var minimap_panel: PanelContainer
 var gift_panel: PanelContainer
+var game_panel: PanelContainer
+var game_view
+var game_result: HBoxContainer
+var game_result_label: Label
 var gift_list: VBoxContainer
 var gift_title: Label
 var gift_target = null
@@ -107,6 +111,7 @@ func _ready() -> void:
 	_build_signin()
 	_build_minimap()
 	_build_gift()
+	_build_minigame()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -694,6 +699,7 @@ func _close_all() -> void:
 	collection_panel.visible = false
 	signin_panel.visible = false
 	gift_panel.visible = false
+	_close_minigame()
 	if fishing:
 		_stop_fishing()
 
@@ -1638,3 +1644,69 @@ func _give_npc(item: String) -> void:
 	for rw in r["rewards"]:
 		show_toast("%s 回赠了你 %s！" % [npc.display_name, rw])
 		add_chat_line("", "【回礼】%s 送给你 %s" % [npc.display_name, rw], Color(1, 0.85, 0.5))
+
+
+# ---------- 接果子小游戏 ----------
+
+func _build_minigame() -> void:
+	game_panel = _panel()
+	_centered(game_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	game_panel.add_child(v)
+	var title := HBoxContainer.new()
+	var tl := _label("城堡小游戏：接果子", 22)
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_child(tl)
+	title.add_child(_button("离开", _close_minigame))
+	v.add_child(title)
+	game_view = preload("res://scripts/minigame.gd").new()
+	game_view.finished.connect(_on_minigame_finished)
+	v.add_child(game_view)
+	game_result = HBoxContainer.new()
+	game_result_label = _label("", 17)
+	game_result_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	game_result.add_child(game_result_label)
+	game_result.add_child(_button("再玩一次", _start_minigame))
+	v.add_child(game_result)
+	game_panel.visible = false
+
+
+func open_minigame_intro() -> void:
+	var left := GameState.catch_plays_left()
+	var reward_text := "今天还有 %d 次奖励机会（得分 ×2 摩尔豆，最多 120）。" % left if left > 0 else "今天的奖励次数用完啦，不过还可以玩着练手~"
+	show_dialog("城堡大门", "接果子：用鼠标或 A / D 移动篮子，30 秒内接住掉下来的果子！\n普通果子 +1，金果子 +5，坏果子 -2。" + reward_text + "\n最高纪录：%d 分" % GameState.best_catch,
+		[["开始游戏", _start_minigame], ["下次再说", _noop]])
+
+
+func _start_minigame() -> void:
+	close_popups()
+	game_result_label.text = "移动篮子接果子！"
+	game_panel.visible = true
+	GameState.input_locked = true
+	game_view.start()
+	Sfx.play("door")
+
+
+func _on_minigame_finished(score: int) -> void:
+	var r := GameState.finish_catch(score)
+	var msg := "时间到！得分 %d" % score
+	if r[2]:
+		msg += "  · 新纪录！"
+	if int(r[0]) > 0:
+		msg += "  · 获得 %d 摩尔豆、%d 经验" % [r[0], r[1]]
+	else:
+		msg += "  · 今天的奖励次数用完了"
+	game_result_label.text = msg
+	Sfx.play("catch" if score >= 20 else "harvest")
+	if player != null:
+		player.play_emote("happy" if score >= 15 else "wave")
+
+
+func _close_minigame() -> void:
+	if game_panel == null:
+		return
+	if game_view.active:
+		game_view.active = false
+	game_panel.visible = false
+	GameState.input_locked = false

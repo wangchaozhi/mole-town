@@ -12,6 +12,7 @@ const UI = preload("res://scripts/ui.gd")
 const RemoteMole = preload("res://scripts/remote_mole.gd")
 const Rain = preload("res://scripts/rain.gd")
 const Furniture = preload("res://scripts/furniture.gd")
+const Gate = preload("res://scripts/gate.gd")
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
@@ -305,6 +306,9 @@ func _spawn_npc(n: String, role: String, pos: Vector2, hat: String, col: Color, 
 
 func _build_props() -> void:
 	_prop("castle", Vector2(1200, 330))
+	var gate = Gate.new()
+	gate.position = Vector2(1200, 330)
+	ysort.add_child(gate)
 	_prop("fountain", Vector2(1200, 730))
 	_prop("house", Vector2(650, 480), "乐乐的家")
 	_prop("shop", Vector2(1750, 480), "摩尔百货")
@@ -367,6 +371,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if GameState.input_locked:
 		return
 	if ui.fishing:
 		return

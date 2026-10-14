@@ -165,6 +165,18 @@ func _run() -> void:
 	ui.do_emote("wave")
 	check(p.emote == "wave", "做表情")
 
+	print("[接果子小游戏]")
+	ui._start_minigame()
+	check(GameState.input_locked and ui.game_view.active, "开始小游戏并锁定移动")
+	var gv = ui.game_view
+	gv.spawn_timer = 99.0
+	gv.fruits = [{"pos": Vector2(gv.basket_x, gv.H - 70), "speed": 200.0, "kind": "gold"}]
+	gv.time_left = 0.5
+	await _frames(40)
+	check(not gv.active and gv.score == 5 and GameState.best_catch >= 5, "接到金果子 +5 并结算")
+	ui._close_minigame()
+	check(not GameState.input_locked, "离开小游戏解锁移动")
+
 	print("[存档]")
 	GameState.save_game()
 	var snapshot := {"beans": GameState.beans, "level": GameState.player_level, "hat": GameState.hat, "name": GameState.player_name}

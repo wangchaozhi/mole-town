@@ -46,7 +46,7 @@ var focus_scan := 0.0
 
 
 func _keyboard_dir() -> Vector2:
-	if fishing or get_viewport().gui_get_focus_owner() is LineEdit:
+	if fishing or GameState.input_locked or get_viewport().gui_get_focus_owner() is LineEdit:
 		return Vector2.ZERO
 	var d := Vector2.ZERO
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
