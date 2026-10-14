@@ -734,6 +734,8 @@ func _input(event) -> void:
 				player.interact_nearest()
 		KEY_C:
 			toggle_collection()
+		KEY_F12:
+			take_screenshot()
 		KEY_M:
 			minimap_panel.visible = not minimap_panel.visible
 		KEY_H:
@@ -1122,3 +1124,18 @@ func _claim_weekly(npc) -> void:
 		npc.say("这是你应得的！")
 		var extra := "，还有一座金奖杯（放进背包了，可以摆在小院里）" if GameState.count("furn_trophy") > had_trophy else ""
 		show_toast("获得 %d 摩尔豆%s！" % [GameState.WEEKLY_REWARD, extra])
+
+
+# ---------- 截图 ----------
+
+func take_screenshot() -> String:
+	var img := get_viewport().get_texture().get_image()
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://screenshots"))
+	var stamp := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+	var path := "user://screenshots/摩尔小镇_%s.png" % stamp
+	if img.save_png(path) != OK:
+		show_toast("截图失败")
+		return ""
+	Sfx.play("pop")
+	show_toast("截图已保存：" + ProjectSettings.globalize_path(path))
+	return path

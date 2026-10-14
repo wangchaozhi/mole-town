@@ -38,7 +38,9 @@ func _ready() -> void:
 
 	music = AudioStreamPlayer.new()
 	music.bus = "Music"
-	music.stream = _make_music()
+	tracks["day"] = _make_music()
+	music.stream = tracks["day"]
+	_gen_task = WorkerThreadPool.add_task(_gen_tracks)
 	add_child(music)
 	music.play()
 
@@ -56,6 +58,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_music(delta)
 	# 雨声随天气淡入淡出
 	var target := -14.0 if GameState.raining else -60.0
 	rain_player.volume_db = move_toward(rain_player.volume_db, target, delta * 20.0)
@@ -184,8 +187,6 @@ func _make(samples: PackedFloat32Array) -> AudioStreamWAV:
 
 ## 轻快的背景音乐：五声音阶旋律 + 低音，8 小节循环
 func _make_music() -> AudioStreamWAV:
-	var bpm := 104.0
-	var beat := 60.0 / bpm
 	# [MIDI 音高(0 = 休止), 拍数]
 	var melody := [
 		[72, 1], [76, 0.5], [79, 0.5], [81, 1], [79, 1],
@@ -197,7 +198,12 @@ func _make_music() -> AudioStreamWAV:
 		[74, 1], [72, 0.5], [74, 0.5], [76, 1], [79, 1],
 		[74, 1], [72, 1], [72, 1], [0, 1],
 	]
-	var bass_roots := [48, 45, 41, 43, 48, 45, 41, 43]  # C Am F G
+	return _compose(104.0, melody, [48, 45, 41, 43, 48, 45, 41, 43], "triangle", 0.16, 2.5, "sine", 0.14)  # C Am F G
+
+
+## 作曲：旋律 [MIDI 音高(0 = 休止), 拍数]（总共 32 拍）+ 每小节一个低音根音（8 小节）
+func _compose(bpm: float, melody: Array, bass_roots: Array, lead: String, lead_vol: float, lead_decay: float, bass: String, bass_vol: float) -> AudioStreamWAV:
+	var beat := 60.0 / bpm
 	var total := int(32 * beat * RATE)
 	var out := PackedFloat32Array()
 	out.resize(total)
@@ -205,7 +211,7 @@ func _make_music() -> AudioStreamWAV:
 	for m in melody:
 		var dur: float = float(m[1]) * beat
 		if int(m[0]) > 0:
-			var tone := _note(_midi(int(m[0])), dur, "triangle", 0.16, 0.01, 2.5)
+			var tone := _note(_midi(int(m[0])), dur, lead, lead_vol, 0.01, lead_decay)
 			for i in tone.size():
 				if pos + i < total:
 					out[pos + i] += tone[i]
@@ -213,7 +219,7 @@ func _make_music() -> AudioStreamWAV:
 	for bar in 8:
 		for b in 4:
 			var root: int = bass_roots[bar] + (12 if b % 2 == 1 else 0)
-			var tone := _note(_midi(root), beat * 0.9, "sine", 0.14, 0.01, 4.0)
+			var tone := _note(_midi(root), beat * 0.9, bass, bass_vol, 0.01, 4.0)
 			var start := int((bar * 4 + b) * beat * RATE)
 			for i in tone.size():
 				if start + i < total:
@@ -229,7 +235,73 @@ func _midi(n: int) -> float:
 
 
 func _exit_tree() -> void:
+	if _gen_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_gen_task)
 	# 退出前停掉循环播放的音乐和雨声，避免引擎退出时报资源泄漏
 	for p in [music, rain_player] + players:
 		p.stop()
 		p.stream = null
+	tracks.clear()
+
+
+# ---------- 夜晚 / 节日音乐 ----------
+
+var tracks := {}  # "day" / "night" / "festival" -> AudioStreamWAV
+var _gen_task := -1
+var current_track := "day"
+var _check_timer := 0.0
+
+
+func _make_night() -> AudioStreamWAV:
+	# 慢一点、低一点、长音多：安静的夜曲（A 小调）
+	var melody := [
+		[69, 2], [72, 1], [76, 1], [74, 2], [72, 2], [69, 2], [67, 1], [69, 1], [72, 4],
+		[76, 2], [74, 1], [72, 1], [69, 2], [67, 2], [64, 2], [67, 2], [69, 4],
+	]
+	return _compose(72.0, melody, [45, 41, 43, 40, 45, 41, 43, 45], "sine", 0.13, 1.2, "sine", 0.1)
+
+
+func _make_festival() -> AudioStreamWAV:
+	# 欢快的节日曲（《小星星》的旋律，公有领域）
+	var line1 := [[72, 0.5], [72, 0.5], [79, 0.5], [79, 0.5], [81, 0.5], [81, 0.5], [79, 1],
+		[77, 0.5], [77, 0.5], [76, 0.5], [76, 0.5], [74, 0.5], [74, 0.5], [72, 1]]
+	var line2 := [[79, 0.5], [79, 0.5], [77, 0.5], [77, 0.5], [76, 0.5], [76, 0.5], [74, 1]]
+	var down := [[84, 1], [83, 1], [81, 1], [79, 1], [77, 1], [76, 1], [74, 1], [72, 1]]
+	var melody: Array = line1 + line2 + line2 + line1 + down
+	return _compose(132.0, melody, [48, 48, 41, 48, 43, 48, 41, 43], "square", 0.09, 3.0, "square", 0.07)
+
+
+## 夜晚和节日的曲子在后台线程里生成，不拖慢启动
+func _gen_tracks() -> void:
+	var night := _make_night()
+	var fest := _make_festival()
+	_set_tracks.call_deferred(night, fest)
+
+
+func _set_tracks(night: AudioStreamWAV, fest: AudioStreamWAV) -> void:
+	tracks["night"] = night
+	tracks["festival"] = fest
+
+
+func _wanted_track() -> String:
+	if GameState.festival() != "":
+		return "festival"
+	return "night" if GameState.is_night() else "day"
+
+
+func _update_music(delta: float) -> void:
+	_check_timer -= delta
+	if _check_timer > 0.0:
+		return
+	_check_timer = 1.0
+	var want := _wanted_track()
+	if want == current_track or not tracks.has(want):
+		return
+	current_track = want
+	# 交叉淡出淡入
+	var tw := create_tween()
+	tw.tween_property(music, "volume_db", -30.0, 1.2)
+	tw.tween_callback(func():
+		music.stream = tracks[want]
+		music.play())
+	tw.tween_property(music, "volume_db", 0.0, 1.2)
