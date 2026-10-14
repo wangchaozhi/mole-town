@@ -573,7 +573,7 @@ func _build_help() -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	l.text = "• 新玩家会有一段新手引导：跟着左上角的提示和地图上的橙色箭头走，每完成一步都有奖励（可以跳过）\n" \
 		+ "• 鼠标左键点击地面走路，点击人物 / 物体互动；也可以用 WASD / 方向键走路，按 F 和身边的东西互动\n" \
-		+ "• 开心农场（右下）：在右下角的种子栏选好种子，点空地播种（新作物随等级解锁）；点作物浇水（生长加速），浇过水再点一下可以施肥（Lv2 起商店有卖）；成熟后点击收获；有虫子时点击抓虫\n" \
+		+ "• 开心农场（右下）：在右下角的种子栏选好种子（数字键 1~6 也能切换），点空地播种（新作物随等级解锁）；点作物浇水（生长加速），浇过水再点一下可以施肥（Lv2 起商店有卖）；成熟后点击收获；有虫子时点击抓虫\n" \
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
@@ -629,6 +629,7 @@ func _refresh_seeds() -> void:
 		var b: Button = seed_buttons[id]
 		if GameState.is_unlocked(id) or GameState.count("seed_" + id) > 0:
 			b.text = "%s ×%d" % [GameState.CROPS[id]["name"], GameState.count("seed_" + id)]
+			b.tooltip_text = "快捷键 %d" % (GameState.CROPS.keys().find(id) + 1)
 			b.disabled = false
 		else:
 			b.text = "%s Lv%d" % [GameState.CROPS[id]["name"], int(GameState.CROPS[id]["level"])]
@@ -767,6 +768,23 @@ func _input(event) -> void:
 			help_panel.visible = not help_panel.visible
 		KEY_ESCAPE:
 			_close_all()
+		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9:
+			select_seed_index(k.keycode - KEY_1)
+
+
+## 数字键 1~9 快速切换种子
+func select_seed_index(i: int) -> void:
+	var ids := GameState.CROPS.keys()
+	if i < 0 or i >= ids.size() or fishing:
+		return
+	var id: String = ids[i]
+	var b: Button = seed_buttons[id]
+	if b.disabled:
+		show_toast("%s要 Lv%d 才能种哦" % [GameState.CROPS[id]["name"], int(GameState.CROPS[id]["level"])])
+		return
+	GameState.selected_seed = id
+	_refresh_seeds()
+	show_toast("准备播种：%s（还有 %d 颗）" % [GameState.item_name("seed_" + id), GameState.count("seed_" + id)])
 
 
 # ---------- 聊天 ----------

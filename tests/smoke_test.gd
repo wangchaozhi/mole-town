@@ -404,6 +404,9 @@ func _run() -> void:
 	for t in ["seeds", "sell", "hats", "furniture", "lahm"]:
 		ui.shop.set_tab(t)
 	check(ui.shop.is_open() and ui.shop.list.get_child_count() > 0, "商店各分页")
+	ui.select_seed_index(1)
+	check(GameState.selected_seed == "strawberry" and ui.seed_buttons["strawberry"].button_pressed, "数字键切换种子")
+	ui.select_seed_index(0)
 	ui._close_all()
 	ui.toggle_collection()
 	ui.show_signin_if_needed()
