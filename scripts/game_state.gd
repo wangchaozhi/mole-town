@@ -97,6 +97,7 @@ var last_signin := ""  # 上次签到的日期（现实日期）
 var signin_streak := 0
 var music_volume := 0.6
 var sfx_volume := 0.8
+var ui_scale := 1.0  # 界面大小
 var raining := false
 var weather_timer := 60.0
 
@@ -302,7 +303,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -364,6 +365,7 @@ func load_game() -> bool:
 	signin_streak = int(data.get("signin_streak", 0))
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
+	ui_scale = clampf(float(data.get("ui_scale", 1.0)), 0.8, 1.4)
 	plots = data.get("plots", {})
 	mail = []
 	for mm in data.get("mail", []):

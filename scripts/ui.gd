@@ -76,10 +76,12 @@ func _ready() -> void:
 	add_to_group("ui")
 	layer = 5
 	root = Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.theme = GameState.ui_theme
 	add_child(root)
+	apply_ui_scale()
+	get_viewport().size_changed.connect(apply_ui_scale)
 	_build_hud()
 	_build_minimap()  # 先建小地图，后面的面板都盖在它上面
 	_build_seed_bar()
@@ -1150,3 +1152,18 @@ func take_screenshot() -> String:
 
 func open_mail() -> void:
 	mailui.open()
+
+
+# ---------- 界面大小 ----------
+
+## 整个界面层按 GameState.ui_scale 缩放；根节点大小 = 屏幕 / 缩放，这样贴边的面板仍然贴在屏幕边上
+func apply_ui_scale() -> void:
+	var s := GameState.ui_scale
+	scale = Vector2(s, s)
+	root.position = Vector2.ZERO
+	root.size = get_viewport().get_visible_rect().size / s
+
+
+func set_ui_scale(s: float) -> void:
+	GameState.ui_scale = s
+	apply_ui_scale()

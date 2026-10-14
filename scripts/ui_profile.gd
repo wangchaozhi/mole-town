@@ -42,6 +42,13 @@ func _build_settings() -> void:
 		GameState.sfx_volume = x
 		Sfx.apply_volumes()
 		Sfx.play("click")))
+	var sizes := HBoxContainer.new()
+	var sl: Label = ui._label("界面大小", 17)
+	sl.custom_minimum_size = Vector2(90, 0)
+	sizes.add_child(sl)
+	for opt in [["小", 0.9], ["标准", 1.0], ["大", 1.15], ["特大", 1.3]]:
+		sizes.add_child(ui._button(opt[0], ui.set_ui_scale.bind(opt[1])))
+	v.add_child(sizes)
 	v.add_child(HSeparator.new())
 	var hb := HBoxContainer.new()
 	var warn: Label = ui._label("清空农场、背包和任务，从头开始", 15)

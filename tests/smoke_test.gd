@@ -304,6 +304,12 @@ func _run() -> void:
 	check(ui.mailui.panel.visible, "打开信箱")
 	ui._close_all()
 
+	print("[界面大小]")
+	ui.set_ui_scale(1.3)
+	var vs: Vector2 = get_viewport().get_visible_rect().size
+	check(ui.scale == Vector2(1.3, 1.3) and ui.root.size.is_equal_approx(vs / 1.3), "界面放大到 1.3 倍并铺满屏幕")
+	ui.set_ui_scale(1.0)
+
 	print("[界面]")
 	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
 	ui.open_shop()
