@@ -63,7 +63,7 @@ func _draw() -> void:
 				draw_circle(_m(l.position), 5.0, Color(0.45, 0.65, 0.95))
 				D_text(_m(l.position) + Vector2(0, -8), "?")
 		var lahm = get_tree().get_first_node_in_group("my_lahm")
-		if lahm != null and not main.inside:
+		if lahm != null and not main.inside and not lahm.hiding:  # 捉迷藏时不在小地图上暴露位置
 			draw_circle(_m(lahm.position), 2.5, Color(1, 0.6, 0.75))
 		var pp: Vector2 = _m(main.map_position())
 		draw_circle(pp, 5.0, Color.WHITE)

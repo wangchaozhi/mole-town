@@ -592,6 +592,7 @@ func teleport(p: Vector2) -> void:
 			c.reset_smoothing()
 	var lahm = get_tree().get_first_node_in_group("my_lahm")
 	if lahm != null:
+		lahm.end_hide(false, true)
 		lahm.position = p + Vector2(-50, 6)
 	fx.pop(p)
 	Sfx.play("door")
@@ -721,6 +722,7 @@ func _move_player(p: Vector2) -> void:
 	player.pending = null
 	var lahm = get_tree().get_first_node_in_group("my_lahm")
 	if lahm != null:
+		lahm.end_hide(false, true)
 		lahm.position = p + Vector2(-50, 4)
 
 

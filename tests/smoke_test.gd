@@ -181,6 +181,16 @@ func _run() -> void:
 	check(GameState.lahm_acc == "bow" and "bow" in GameState.owned_lahm_accs, "给拉姆买蝴蝶结并戴上")
 	GameState.set_lahm_acc("none")
 
+	GameState.lahm_hide_day = -1
+	GameState.lahm_hunger = 100.0
+	if GameState.lahm_level < 2:
+		GameState.add_lahm_exp(GameState.LAHM_LEVELS[1] - GameState.lahm_exp)
+	lahm.interact(p)  # 吃饱了摸摸它 → 邀请捉迷藏
+	check(lahm.hiding and GameState.lahm_hide_day == GameState.day and not lahm.can_hide(), "摸摸拉姆开始捉迷藏（每天一次）")
+	var hb0 := GameState.beans
+	lahm.interact(p)
+	check(not lahm.hiding and GameState.beans == hb0 + 30, "找到躲起来的拉姆有奖励")
+
 	print("[任务]")
 	GameState.quest = {"kind": "harvest", "item": "carrot", "need": 1, "have": 0, "reward": 30}
 	GameState.report("harvest", "carrot")

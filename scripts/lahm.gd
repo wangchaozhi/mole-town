@@ -18,6 +18,13 @@ var task_plot = null  # 正在去帮忙的农田
 var task_kind := ""
 var scan_timer := 1.0
 var treasure_timer := 90.0
+var hiding := false  # 捉迷藏：躲起来等你找
+var hide_time := 0.0
+var hide_spot := Vector2.ZERO
+const HIDE_TIME := 90.0
+const HIDE_SPOTS := [  # 都在灌木 / 树旁边，不会被房子挡住
+	Vector2(485, 630), Vector2(935, 392), Vector2(1585, 392), Vector2(2035, 630), Vector2(335, 962),
+	Vector2(360, 345), Vector2(285, 735), Vector2(2195, 775), Vector2(455, 1312), Vector2(1560, 1250)]
 
 
 func _ready() -> void:
@@ -52,6 +59,9 @@ func is_hungry() -> bool:
 func _process(delta: float) -> void:
 	t += delta
 	pet_cooldown = maxf(0.0, pet_cooldown - delta)
+	if hiding:
+		_hide_process(delta)
+		return
 	if not is_remote and not is_hungry():
 		_helper_tasks(delta)
 	if player != null:
@@ -149,6 +159,9 @@ func get_interact_point() -> Vector2:
 
 
 func interact(_pl) -> void:
+	if hiding:
+		end_hide(true)
+		return
 	GameState.tutorial_event("lahm")
 	if GameState.lahm_hunger >= 90.0:
 		_pet()
@@ -185,12 +198,63 @@ func interact(_pl) -> void:
 func _pet() -> void:
 	_burst()
 	Sfx.play("happy")
+	if can_hide():
+		start_hide()
+		return
 	if pet_cooldown > 0.0:
 		GameState.toast.emit("拉姆蹭了蹭你~")
 		return
 	pet_cooldown = 20.0
 	GameState.add_lahm_exp(2)
 	GameState.toast.emit("摸摸拉姆，它很开心！亲密度 +2")
+
+
+# ---------- 捉迷藏（Lv2 起，每天一次：吃饱时摸摸它就会邀请你玩） ----------
+
+func can_hide() -> bool:
+	var main = get_tree().current_scene
+	return not is_remote and cur_level() >= 2 and GameState.lahm_hide_day != GameState.day and Net.visiting == 0 and player != null and main != null and not main.get("inside")
+
+
+func start_hide() -> void:
+	GameState.lahm_hide_day = GameState.day
+	task_plot = null
+	var pond = get_tree().get_first_node_in_group("pond")
+	var spots := HIDE_SPOTS.filter(func(sp): return sp.distance_to(player.position) > 300.0 and (pond == null or not pond.contains(sp)))
+	hide_spot = spots.pick_random() if not spots.is_empty() else HIDE_SPOTS[0]
+	hiding = true
+	hide_time = HIDE_TIME
+	GameState.toast.emit("拉姆：我们来玩捉迷藏吧！90 秒内找到我哦~")
+
+
+func _hide_process(delta: float) -> void:
+	hide_time -= delta
+	name_label.visible = position.distance_to(hide_spot) > 6.0  # 躲好了就别露出名字
+	var d := hide_spot - position
+	if d.length() > 6.0:
+		position += d.normalized() * minf(d.length(), 520.0 * delta)
+		facing = signf(d.x) if absf(d.x) > 3.0 else facing
+	if hide_time <= 0.0:
+		end_hide(false)
+	queue_redraw()
+
+
+## 结束捉迷藏：found 为 true 是被找到了；quiet 时不提示（例如传送、进屋）
+func end_hide(found: bool, quiet: bool = false) -> void:
+	if not hiding:
+		return
+	hiding = false
+	name_label.visible = true
+	if found:
+		GameState.add_beans(30)
+		GameState.add_lahm_exp(10)
+		GameState.stats["hide_found"] = int(GameState.stats.get("hide_found", 0)) + 1
+		GameState.check_achievements()
+		GameState.toast.emit("被你找到啦！拉姆好开心，+30 摩尔豆，亲密度 +10")
+		Sfx.play("gift")
+		_burst()
+	elif not quiet:
+		GameState.toast.emit("拉姆：嘿嘿，你没找到我~ 明天再玩吧")
 
 
 func _burst() -> void:
@@ -201,6 +265,9 @@ func _burst() -> void:
 # ---------- 绘制 ----------
 
 func _draw() -> void:
+	if hiding and position.distance_to(hide_spot) <= 6.0:
+		_draw_hidden()
+		return
 	var hungry := is_hungry()
 	var lv := cur_level()
 	var r := 17.0 + (lv - 1) * 1.5  # 等级越高个头越大
@@ -263,3 +330,18 @@ func _draw_acc(c: Vector2, r: float, ex: float) -> void:
 				band.append(c + Vector2(cos(a) * (r + 1), sin(a) * (r * 0.45) + r * 0.35))
 			draw_polyline(band, s, 6.0)
 			draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.4, r * 0.7), c + Vector2(-r * 0.1, r * 0.75), c + Vector2(-r * 0.3, r * 1.35), c + Vector2(-r * 0.6, r * 1.3)]), s.darkened(0.15))
+
+
+## 躲在草丛里：只露出触角和一双眼睛
+func _draw_hidden() -> void:
+	var peek := sin(t * 1.5) * 3.0
+	var ant := Vector2(4, -42 + peek)
+	draw_line(Vector2(0, -26 + peek), ant, Color(0.5, 0.3, 0.35), 2.0)
+	draw_circle(ant, 4.5, Color(1, 0.85, 0.2))
+	draw_circle(Vector2(0, -22 + peek), 13.0, Color(1.0, 0.66, 0.78))
+	for sx in [-5.0, 5.0]:
+		draw_circle(Vector2(sx, -24 + peek), 3.0, Color(0.1, 0.05, 0.15))
+	var g := Color(0.3, 0.62, 0.28)
+	for k in [Vector2(-16, -6), Vector2(0, -9), Vector2(16, -6), Vector2(-8, 0), Vector2(9, 0)]:
+		draw_circle(k, 11.0, g)
+		draw_circle(k + Vector2(-3, -4), 5.0, g.lightened(0.15))
