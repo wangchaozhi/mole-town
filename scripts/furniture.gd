@@ -15,8 +15,8 @@ func _ready() -> void:
 	t = randf() * 10.0
 	if index >= 0:
 		add_to_group("interactable")
-	set_process(kind in ["swing", "windmill", "campfire", "lantern", "pumpkin_lamp"])
-	if kind == "campfire" or kind == "lantern" or kind == "pumpkin_lamp":
+	set_process(kind in ["swing", "windmill", "campfire", "lantern", "pumpkin_lamp", "firefly_jar"])
+	if kind in ["campfire", "lantern", "pumpkin_lamp", "firefly_jar"]:
 		var g := Gradient.new()
 		g.set_color(0, Color(1, 1, 1, 1))
 		g.set_color(1, Color(1, 1, 1, 0))
@@ -28,7 +28,7 @@ func _ready() -> void:
 		light = PointLight2D.new()
 		light.texture = tex
 		light.texture_scale = 1.3
-		light.color = Color(1, 0.7, 0.35) if kind == "campfire" else Color(1, 0.88, 0.6)
+		light.color = Color(1, 0.7, 0.35) if kind == "campfire" else (Color(0.75, 1.0, 0.45) if kind == "firefly_jar" else Color(1, 0.88, 0.6))
 		light.position = Vector2(0, -20 if kind == "campfire" else -50)
 		light.enabled = false
 		add_child(light)
@@ -80,6 +80,7 @@ func _draw() -> void:
 		"melon_chair": _melon_chair()
 		"pumpkin_lamp": _pumpkin_lamp()
 		"snowman": _snowman()
+		"firefly_jar": _firefly_jar()
 
 
 func _pot() -> void:
@@ -254,6 +255,21 @@ func _pumpkin_lamp() -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(-12, -24), Vector2(-4, -24), Vector2(-8, -16)]), glow)
 	draw_colored_polygon(PackedVector2Array([Vector2(4, -24), Vector2(12, -24), Vector2(8, -16)]), glow)
 	draw_colored_polygon(PackedVector2Array([Vector2(-10, -10), Vector2(10, -10), Vector2(6, -5), Vector2(0, -8), Vector2(-6, -5)]), glow)
+
+
+func _firefly_jar() -> void:
+	var glass := Color(0.8, 0.95, 1.0, 0.35)
+	D.ell(self, Vector2(0, -22), Vector2(15, 20), glass)
+	D.ring(self, Vector2(0, -22), Vector2(15, 20), Color(0.6, 0.8, 0.9, 0.8), 1.5)
+	draw_rect(Rect2(-10, -46, 20, 6), Color(0.55, 0.38, 0.22))
+	draw_line(Vector2(-6, -46), Vector2(0, -54), Color(0.5, 0.35, 0.2), 1.5)
+	draw_line(Vector2(6, -46), Vector2(0, -54), Color(0.5, 0.35, 0.2), 1.5)
+	var night := GameState.is_night() and not ghost
+	for i in 5:
+		var p := Vector2(sin(t * 1.3 + i * 2.1) * 8.0, -22 + cos(t * 1.1 + i * 1.7) * 11.0)
+		var a := 0.5 + 0.5 * sin(t * 3.0 + i)
+		draw_circle(p, 3.5, Color(0.85, 1.0, 0.4, (0.35 if night else 0.15) * a))
+		draw_circle(p, 1.6, Color(1, 1, 0.7, 0.9 if night else 0.5))
 
 
 func _snowman() -> void:

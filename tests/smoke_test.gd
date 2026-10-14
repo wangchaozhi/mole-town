@@ -445,6 +445,12 @@ func _run() -> void:
 	GameState.fish_records.erase("big_fish")
 	check(not GameState.record_fish_size("big_fish", 40) and GameState.record_fish_size("big_fish", 45) \
 		and not GameState.record_fish_size("big_fish", 41) and GameState.fish_records["big_fish"] == 45, "鱼的尺寸纪录")
+	GameState.stats["fireflies"] = 9
+	var ffly = preload("res://scripts/firefly.gd").new()
+	main.ysort.add_child(ffly)
+	var jar0 := GameState.count("furn_firefly_jar")
+	ffly.interact(p)
+	check(GameState.count("firefly") >= 1 and GameState.count("furn_firefly_jar") == jar0 + 1 and "fireflies" in GameState.achievements, "抓第 10 只萤火虫得到萤火虫灯和成就")
 	GameState.set_title("giant")
 	check(GameState.title == "giant" and p.title_label != null and p.title_label.text.contains("巨无霸"), "佩戴成就称号")
 	GameState.set_title("not_done_xyz")

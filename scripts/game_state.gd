@@ -67,6 +67,7 @@ const FURNITURE := {
 	"pumpkin_lamp": {"name": "南瓜灯", "price": 150, "level": 2, "season": 2},
 	"snowman": {"name": "雪人", "price": 150, "level": 2, "season": 3},
 	"trophy": {"name": "金奖杯", "price": 0, "level": 1, "shop": false},  # 国王的每周挑战奖励，商店不卖
+	"firefly_jar": {"name": "萤火虫灯", "price": 0, "level": 1, "shop": false},  # 累计抓 10 只萤火虫的奖励
 }
 const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围
 
@@ -169,6 +170,8 @@ func item_name(id: String) -> String:
 		return "拉姆果"
 	if id == "fertilizer":
 		return "肥料"
+	if id == "firefly":
+		return "萤火虫"
 	if DISHES.has(id):
 		return DISHES[id]["name"]
 	if id.begins_with("furn_") and FURNITURE.has(id.substr(5)):
@@ -184,6 +187,8 @@ func sell_price(id: String) -> int:
 		return FISH[id]["sell"]
 	if DISHES.has(id):
 		return DISHES[id]["sell"]
+	if id == "firefly":
+		return 12
 	return 0
 
 
@@ -608,6 +613,7 @@ const ACHIEVEMENTS := [
 	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
 	{"id": "giant", "name": "巨无霸", "desc": "收获一个巨型作物", "stat": "giants", "target": 1, "reward": 120},
 	{"id": "hide_seek", "name": "捉迷藏冠军", "desc": "和拉姆玩捉迷藏，找到它 3 次", "stat": "hide_found", "target": 3, "reward": 100},
+	{"id": "fireflies", "name": "夏夜萤火", "desc": "夏天的夜里抓 10 只萤火虫", "stat": "fireflies", "target": 10, "reward": 120},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
 

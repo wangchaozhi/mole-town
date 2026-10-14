@@ -4,6 +4,10 @@ extends CanvasLayer
 ##   迷路的小拉姆 —— 每天早上 8 点一定概率出现在小镇某个角落（见 lost_lahm.gd）
 
 const LostLahm = preload("res://scripts/lost_lahm.gd")
+const Firefly = preload("res://scripts/firefly.gd")
+const FIREFLY_SPOTS := [Vector2(240, 860), Vector2(700, 1150), Vector2(330, 1240), Vector2(150, 600), Vector2(420, 380),
+	Vector2(2250, 900), Vector2(2200, 450), Vector2(900, 330), Vector2(1980, 1300), Vector2(560, 700)]
+const MAX_FIREFLIES := 8
 const SHOWER_TIME := 25.0
 const MAX_WISHES := 5
 const LOST_SPOTS := [Vector2(150, 420), Vector2(2280, 640), Vector2(980, 1320), Vector2(1520, 240), Vector2(340, 1250), Vector2(2250, 1300)]
@@ -16,6 +20,7 @@ var shower := 0.0
 var spawn := 0.0
 var wishes := 0
 var last_hour := -1
+var firefly_timer := 2.0
 
 
 func _ready() -> void:
@@ -50,7 +55,27 @@ func _process(delta: float) -> void:
 	var indoors: bool = main != null and main.inside
 	canvas.visible = not indoors
 	canvas.queue_redraw()
+	_fireflies(delta)
 
+
+## 夏天 19 点到凌晨 3 点之间，萤火虫陆续出现在湖边和树林里；时间过了就飞走
+func _fireflies(delta: float) -> void:
+	firefly_timer -= delta
+	if firefly_timer > 0.0 or main == null:
+		return
+	firefly_timer = 3.0
+	var h := GameState.minutes / 60.0
+	var active := GameState.season() == 1 and (h >= 19.0 or h < 3.0) and Net.visiting == 0
+	var flies := get_tree().get_nodes_in_group("fireflies")
+	if not active:
+		for f in flies:
+			if not f.leaving:
+				f.fly_away()
+		return
+	if flies.size() < MAX_FIREFLIES:
+		var ff = Firefly.new()
+		ff.position = FIREFLY_SPOTS.pick_random() + Vector2(randf_range(-60, 60), randf_range(-40, 40))
+		main.ysort.add_child(ff)
 
 func _hourly(h: int) -> void:
 	if h == 22 and randf() < 0.4:
