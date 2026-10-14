@@ -162,6 +162,13 @@ func _run() -> void:
 	var carrots := GameState.count("carrot")
 	fp.interact(p)
 	check(GameState.count("carrot") - carrots >= 2 and not fp.fert, "施过肥的作物收获至少 2 个")
+	GameState.add_item("seed_carrot")
+	fp.interact(p)
+	fp.growth = 1.0
+	fp.giant = true
+	carrots = GameState.count("carrot")
+	fp.interact(p)
+	check(GameState.count("carrot") - carrots >= 4 and not fp.giant and "giant" in GameState.achievements, "巨型作物收获至少 4 个并解锁成就")
 
 	print("[拉姆]")
 	var lahm = get_tree().get_first_node_in_group("my_lahm")

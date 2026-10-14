@@ -48,6 +48,7 @@ const HATS := {
 const LAHM_FRUIT_PRICE := 15
 const FERTILIZER_PRICE := 25  # 肥料：作物生长 ×1.5，收获必定多 1 个
 const FERTILIZER_LEVEL := 2
+const GIANT_CHANCE := 0.04  # 作物成熟时长成巨型的概率（施肥 ×3）
 
 const FURNITURE := {
 	"pot": {"name": "小花盆", "price": 30, "level": 1},
@@ -591,6 +592,7 @@ const ACHIEVEMENTS := [
 	{"id": "story", "name": "城堡的秘密", "desc": "完成主线剧情", "stat": "story_done", "target": 1, "reward": 200},
 	{"id": "dancer", "name": "舞林高手", "desc": "和好友一起合拍地做 5 次表情", "stat": "dances", "target": 5, "reward": 150},
 	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
+	{"id": "giant", "name": "巨无霸", "desc": "收获一个巨型作物", "stat": "giants", "target": 1, "reward": 120},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
 

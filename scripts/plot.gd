@@ -14,6 +14,7 @@ var t := 0.0
 var remote = null  # 串门时：好友这块地的状态 Dictionary
 var greenhouse := false  # 温室里的地块
 var fert := false  # 施过肥：生长 ×1.5，收获多 1 个
+var giant := false  # 成熟时小概率长成巨型作物（施过肥概率更高），收获多 3 个
 var _was_busy := true
 
 
@@ -29,6 +30,7 @@ func _ready() -> void:
 		bug = bool(s.get("bug", false))
 		picked = bool(s.get("picked", false))
 		fert = bool(s.get("fert", false))
+		giant = bool(s.get("giant", false))
 		if crop != "" and not GameState.CROPS.has(crop):
 			crop = ""
 		if crop != "" and not bug:
@@ -36,7 +38,7 @@ func _ready() -> void:
 
 
 func get_state() -> Dictionary:
-	return {"crop": crop, "growth": growth, "water_time": water_time, "bug": bug, "picked": picked, "fert": fert}
+	return {"crop": crop, "growth": growth, "water_time": water_time, "bug": bug, "picked": picked, "fert": fert, "giant": giant}
 
 
 func store_state() -> void:
@@ -54,6 +56,7 @@ func set_remote(s) -> void:
 		"bug": bool(s.get("bug", false)),
 		"picked": bool(s.get("picked", false)),
 		"fert": bool(s.get("fert", false)),
+		"giant": bool(s.get("giant", false)),
 	}
 
 
@@ -70,6 +73,8 @@ func _advance(sec: float) -> void:
 	var gt: float = GameState.CROPS[crop]["grow_time"] / speed
 	var wet := minf(sec, water_time)
 	growth = minf(1.0, growth + (wet * 2.0 + (sec - wet)) / gt)
+	if growth >= 1.0 and randf() < GameState.GIANT_CHANCE * (3.0 if fert else 1.0):
+		giant = true
 	water_time = maxf(0.0, water_time - sec)
 
 
@@ -118,6 +123,7 @@ func interact(_pl) -> void:
 			water_time = 0.0
 			picked = false
 			fert = false
+			giant = false
 			Sfx.play("plant")
 			GameState.add_exp(1)
 			GameState.tutorial_event("plant")
@@ -125,18 +131,24 @@ func interact(_pl) -> void:
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
 	elif growth >= 1.0:
-		var n := 1 + (1 if randf() < 0.35 else 0) + (1 if GameState.festival() == "harvest" else 0) + (1 if fert else 0)
+		var n := 1 + (1 if randf() < 0.35 else 0) + (1 if GameState.festival() == "harvest" else 0) + (1 if fert else 0) + (3 if giant else 0)
 		GameState.add_item(crop, n)
 		GameState.record("harvest", crop, n)
 		for i in n:
 			GameState.report("harvest", crop)
 		Sfx.play("harvest")
-		GameState.toast.emit("收获了 %s ×%d！" % [GameState.item_name(crop), n])
+		if giant:
+			GameState.stats["giants"] = int(GameState.stats.get("giants", 0)) + 1
+			GameState.check_achievements()
+			GameState.toast.emit("哇！巨型%s！收获了 ×%d！" % [GameState.item_name(crop), n])
+		else:
+			GameState.toast.emit("收获了 %s ×%d！" % [GameState.item_name(crop), n])
 		crop = ""
 		growth = 0.0
 		water_time = 0.0
 		picked = false
 		fert = false
+		giant = false
 	elif water_time <= 0.0:
 		water_time = 20.0
 		Sfx.play("water")
@@ -235,7 +247,12 @@ func _draw() -> void:
 		D.ell(self, Vector2(-10, -22), Vector2(9, 4), leaf.lightened(0.1))
 		draw_circle(Vector2(0, h - 4), 7.0, leaf.lerp(col, 0.35))
 	else:
-		_draw_ripe(c_crop, col, leaf)
+		if s.get("giant", false):
+			draw_set_transform(Vector2(0, 6), 0.0, Vector2(1.45, 1.45))
+			_draw_ripe(c_crop, col, leaf)
+			draw_set_transform(Vector2.ZERO)
+		else:
+			_draw_ripe(c_crop, col, leaf)
 		if s["picked"]:
 			D.text(self, Vector2(0, 36), "被摘过", 12, Color(1, 0.95, 0.8))
 		else:
