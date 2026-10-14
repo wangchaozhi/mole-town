@@ -820,15 +820,32 @@ func is_giftable(id: String) -> bool:
 # ---------- NPC 好感度 ----------
 
 const NPC_INFO := {
-	"乐乐": {"likes": ["strawberry", "sunflower", "strawberry_cake"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
-	"店长豆豆": {"likes": ["gold_fish", "watermelon", "carrot_soup"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
-	"小黄": {"likes": ["corn", "carrot", "grilled_corn"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
-	"嘟嘟": {"likes": ["big_fish", "small_fish", "fish_soup", "ice_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
-	"米米": {"likes": ["pumpkin", "strawberry", "pumpkin_pie"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
-	"阿呆": {"likes": ["watermelon", "gold_fish", "watermelon_smoothie"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
+	"乐乐": {"birthday": 3, "likes": ["strawberry", "sunflower", "strawberry_cake"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
+	"店长豆豆": {"birthday": 9, "likes": ["gold_fish", "watermelon", "carrot_soup"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
+	"小黄": {"birthday": 13, "likes": ["corn", "carrot", "grilled_corn"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
+	"嘟嘟": {"birthday": 17, "likes": ["big_fish", "small_fish", "fish_soup", "ice_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
+	"米米": {"birthday": 23, "likes": ["pumpkin", "strawberry", "pumpkin_pie"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
+	"阿呆": {"birthday": 26, "likes": ["watermelon", "gold_fish", "watermelon_smoothie"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
 }
 
 var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
+
+
+## 今天过生日的 NPC（一年 4 季 × 7 天 = 28 天，每个 NPC 有一天生日），没有则返回 ""
+func birthday_npc(d: int = -1) -> String:
+	if d < 0:
+		d = day
+	var yd := (d - 1) % (DAYS_PER_SEASON * 4) + 1
+	for n in NPC_INFO:
+		if int(NPC_INFO[n]["birthday"]) == yd:
+			return n
+	return ""
+
+
+## 某个 NPC 的生日是「X季第 N 天」
+func birthday_text(npc: String) -> String:
+	var yd := int(NPC_INFO[npc]["birthday"]) - 1
+	return "%s季第 %d 天" % [["春", "夏", "秋", "冬"][yd / DAYS_PER_SEASON], yd % DAYS_PER_SEASON + 1]
 var npc_gift_day: Dictionary = {}  # NPC 名字 -> 上次送礼的游戏日
 
 
@@ -861,6 +878,9 @@ func gift_npc(npc: String, item: String) -> Dictionary:
 	var gain := 15 if liked else (5 if CROPS.has(item) or FISH.has(item) else 3)
 	if item == "boot":
 		gain = 1
+	var bday := birthday_npc() == npc
+	if bday:
+		gain *= 2  # 生日当天收到礼物格外开心
 	var before := affinity(npc)
 	npc_affinity[npc] = before + gain
 	npc_gift_day[npc] = day
@@ -877,7 +897,7 @@ func gift_npc(npc: String, item: String) -> Dictionary:
 				rewards.append("%s ×%d" % [item_name(str(r[0])), int(r[1])])
 	add_exp(3)
 	check_achievements()
-	return {"ok": true, "liked": liked, "gain": gain, "rewards": rewards}
+	return {"ok": true, "liked": liked, "gain": gain, "rewards": rewards, "birthday": bday}
 
 
 # ---------- 接果子小游戏 ----------
@@ -939,6 +959,16 @@ func festival_name() -> String:
 
 
 func festival_text() -> String:
+	var b := birthday_npc()
+	var f := _festival_line()
+	if b != "":
+		var bl := "今天是%s的生日，送礼好感翻倍！" % b
+		return bl if f == "" else f + "
+" + bl
+	return f
+
+
+func _festival_line() -> String:
 	match festival():
 		"fishing":
 			var n := contest_count if contest_day == day else 0
@@ -1052,7 +1082,10 @@ func _start_new_day() -> void:
 	var m := market()
 	toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
 	if festival() != "":
-		toast.emit(festival_text() + "！")
+		toast.emit(_festival_line() + "！")
+	var bn := birthday_npc()
+	if bn != "":
+		toast.emit("今天是%s的生日！去送份礼物吧（好感翻倍）" % bn)
 
 
 ## 晚上（20 点以后或 6 点以前）在床上睡觉，直接到第二天早上 6 点。返回跳过的现实秒数（用来让作物继续生长）
@@ -1318,6 +1351,9 @@ func open_mail(i: int) -> String:
 
 ## 每天早上：一半概率收到某位 NPC 的信（好感越高礼物越好）；新的一周国王会来信
 func _daily_mail() -> void:
+	var tomorrow := birthday_npc(day + 1)
+	if tomorrow != "":
+		add_mail("乐乐" if tomorrow != "乐乐" else "米米", "悄悄告诉你：明天是%s的生日哦！记得准备一份礼物~" % tomorrow)
 	if (day - 1) % 7 == 0 and day > 1:
 		add_mail("摩尔国王", "新的一周开始了！本周挑战：%s。完成后来城堡找我领奖！" % weekly()["text"])
 	if randf() < 0.5:

@@ -847,7 +847,10 @@ func on_npc_interact(npc) -> void:
 
 func _npc_title(npc) -> String:
 	var n: String = npc.display_name
-	return "%s · %s（好感 %d）" % [n, GameState.affinity_tier(n), GameState.affinity(n)]
+	var bd := ""
+	if GameState.NPC_INFO.has(n):
+		bd = "  · 今天生日！" if GameState.birthday_npc() == n else "  · 生日：%s" % GameState.birthday_text(n)
+	return "%s · %s（好感 %d）%s" % [n, GameState.affinity_tier(n), GameState.affinity(n), bd]
 
 
 func _lele_dialog(npc) -> void:

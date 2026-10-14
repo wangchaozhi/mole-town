@@ -420,6 +420,14 @@ func _run() -> void:
 	check(ui.act.gift_panel.visible, "打开给 NPC 送礼的面板")
 	ui.act._give("corn", 1)
 	check(GameState.affinity("小黄") == 15 and not ui.act.gift_panel.visible, "通过界面送小黄喜欢的玉米")
+	var bday_day0 := GameState.day
+	GameState.day = 17 + 28  # 第二年嘟嘟的生日
+	check(GameState.birthday_npc() == "嘟嘟" and GameState.festival_text().contains("嘟嘟的生日"), "NPC 生日按 28 天一年循环")
+	GameState.add_item("small_fish")
+	var bday_aff0 := GameState.affinity("嘟嘟")
+	var br := GameState.gift_npc("嘟嘟", "small_fish")
+	check(br["birthday"] and GameState.affinity("嘟嘟") - bday_aff0 == 30, "生日当天送礼好感翻倍")
+	GameState.day = bday_day0
 
 	print("[存档]")
 	GameState.save_game()

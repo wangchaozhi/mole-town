@@ -129,6 +129,9 @@ func _give_npc(item: String) -> void:
 	if item == "boot":
 		npc.play_emote("cry")
 		npc.say("呃……破靴子？谢、谢谢……")
+	elif r["birthday"]:
+		npc.play_emote("sing")
+		npc.say("你记得我的生日！太感动了~")
 	elif r["liked"]:
 		npc.play_emote("happy")
 		npc.say("哇！我最喜欢%s了！" % GameState.item_name(item))

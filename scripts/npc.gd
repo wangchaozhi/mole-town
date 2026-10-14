@@ -72,6 +72,18 @@ func _night() -> void:
 		play_emote("sleep")
 
 
+func _draw() -> void:
+	super._draw()
+	if GameState.birthday_npc() == display_name:
+		# 生日当天身边飘着一个气球
+		var sway := sin(Time.get_ticks_msec() / 600.0) * 4.0
+		var bp := Vector2(30 + sway, -92)
+		draw_line(Vector2(18, -40), bp + Vector2(0, 16), Color(0.4, 0.4, 0.4), 1.2)
+		D.ell(self, bp, Vector2(11, 14), Color(1, 0.4, 0.55))
+		D.ell(self, bp + Vector2(-4, -5), Vector2(3, 4), Color(1, 1, 1, 0.5))
+		draw_colored_polygon(PackedVector2Array([bp + Vector2(-3, 16), bp + Vector2(3, 16), bp + Vector2(0, 12)]), Color(1, 0.4, 0.55))
+
+
 func get_interact_point() -> Vector2:
 	var pl = get_tree().get_first_node_in_group("player")
 	var side := 1.0
