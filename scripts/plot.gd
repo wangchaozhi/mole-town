@@ -131,7 +131,7 @@ func interact(_pl) -> void:
 		else:
 			GameState.toast.emit("没有%s了，去摩尔百货买吧" % GameState.item_name("seed_" + seed))
 	elif growth >= 1.0:
-		var n := 1 + (1 if randf() < 0.35 else 0) + (1 if GameState.festival() == "harvest" else 0) + (1 if fert else 0) + (3 if giant else 0)
+		var n := 1 + (1 if randf() < (0.6 if GameState.is_lucky() else 0.35) else 0) + (1 if GameState.festival() == "harvest" else 0) + (1 if fert else 0) + (3 if giant else 0)
 		GameState.add_item(crop, n)
 		GameState.record("harvest", crop, n)
 		for i in n:

@@ -6,8 +6,9 @@ extends CanvasLayer
 const LostLahm = preload("res://scripts/lost_lahm.gd")
 const Firefly = preload("res://scripts/firefly.gd")
 const LeafPile = preload("res://scripts/leaf_pile.gd")
+const Clover = preload("res://scripts/clover.gd")
 const LEAF_SPOTS := [Vector2(480, 580), Vector2(860, 420), Vector2(1560, 660), Vector2(2050, 560), Vector2(300, 1000),
-	Vector2(1530, 990), Vector2(2200, 1180), Vector2(760, 900), Vector2(1950, 380), Vector2(200, 480)]
+	Vector2(1530, 990), Vector2(2200, 1180), Vector2(760, 900), Vector2(2010, 400), Vector2(200, 480)]
 const FIREFLY_SPOTS := [Vector2(240, 860), Vector2(700, 1150), Vector2(330, 1240), Vector2(150, 600), Vector2(420, 380),
 	Vector2(2250, 900), Vector2(2200, 450), Vector2(900, 330), Vector2(1980, 1300), Vector2(560, 700)]
 const MAX_FIREFLIES := 8
@@ -100,6 +101,15 @@ func spawn_leaf_piles() -> void:
 	if main == null:
 		return
 	var winter := GameState.season() == 3
+	for cl in get_tree().get_nodes_in_group("clovers"):
+		if GameState.season() != 0:
+			cl.queue_free()
+	if GameState.season() == 0 and GameState.leaf_day != GameState.day and Net.visiting == 0:
+		# 春天：藏一棵四叶草
+		GameState.leaf_day = GameState.day
+		var cl = Clover.new()
+		cl.position = LEAF_SPOTS.pick_random() + Vector2(randf_range(-30, 30), randf_range(-20, 20))
+		main.ysort.add_child(cl)
 	for lp in get_tree().get_nodes_in_group("leaf_piles"):
 		if GameState.season() < 2 or lp.snow != winter:
 			lp.queue_free()

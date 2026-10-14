@@ -967,6 +967,8 @@ func _reel() -> void:
 		if fish_marker >= fish_zone.x and fish_marker <= fish_zone.x + fish_zone.y:
 			GameState.story_event("fish")
 			var lucky := randf()
+			if GameState.is_lucky():
+				lucky *= 0.5  # 幸运日：宝箱、漂流瓶的概率翻倍
 			if lucky < 0.03:
 				_fish_treasure()
 				return

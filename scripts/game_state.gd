@@ -82,6 +82,7 @@ var lahm_exp: int = 0
 var player_exp: int = 0
 var player_level: int = 1
 var lahm_level: int = 1
+var lucky_day: int = -1  # 找到四叶草的那天是幸运日
 var leaf_day: int = -1  # 哪一天已经撒过落叶堆 / 雪堆（存档，退出重进不会再刷）
 var lahm_hide_day: int = -1  # 今天是否已经和拉姆玩过捉迷藏
 var day: int = 1
@@ -326,7 +327,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day, "leaf_day": leaf_day,
+		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day, "leaf_day": leaf_day, "lucky_day": lucky_day,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "day_log": day_log, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
@@ -363,6 +364,7 @@ func load_game() -> bool:
 	lahm_exp = int(data.get("lahm_exp", 0))
 	lahm_hide_day = int(data.get("lahm_hide_day", -1))
 	leaf_day = int(data.get("leaf_day", -1))
+	lucky_day = int(data.get("lucky_day", -1))
 	player_exp = int(data.get("player_exp", 0))
 	player_level = clampi(int(data.get("player_level", 1)), 1, MAX_LEVEL)
 	lahm_level = clampi(int(data.get("lahm_level", 1)), 1, LAHM_LEVELS.size())
@@ -559,6 +561,7 @@ func reset_game() -> void:
 	lahm_exp = 0
 	lahm_hide_day = -1
 	leaf_day = -1
+	lucky_day = -1
 	lahm_level = 1
 	player_exp = 0
 	player_level = 1
@@ -617,6 +620,7 @@ const ACHIEVEMENTS := [
 	{"id": "giant", "name": "巨无霸", "desc": "收获一个巨型作物", "stat": "giants", "target": 1, "reward": 120},
 	{"id": "hide_seek", "name": "捉迷藏冠军", "desc": "和拉姆玩捉迷藏，找到它 3 次", "stat": "hide_found", "target": 3, "reward": 100},
 	{"id": "fireflies", "name": "夏夜萤火", "desc": "夏天的夜里抓 10 只萤火虫", "stat": "fireflies", "target": 10, "reward": 120},
+	{"id": "clover", "name": "幸运四叶草", "desc": "春天里找到 3 棵四叶草", "stat": "clovers", "target": 3, "reward": 120},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
 
@@ -898,6 +902,10 @@ const NPC_INFO := {
 var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
 
 
+func is_lucky() -> bool:
+	return lucky_day == day
+
+
 ## 今天过生日的 NPC（一年 4 季 × 7 天 = 28 天，每个 NPC 有一天生日），没有则返回 ""
 func birthday_npc(d: int = -1) -> String:
 	if d < 0:
@@ -1026,13 +1034,16 @@ func festival_name() -> String:
 
 
 func festival_text() -> String:
-	var b := birthday_npc()
+	var lines := PackedStringArray()
 	var f := _festival_line()
+	if f != "":
+		lines.append(f)
+	var b := birthday_npc()
 	if b != "":
-		var bl := "今天是%s的生日，送礼好感翻倍！" % b
-		return bl if f == "" else f + "
-" + bl
-	return f
+		lines.append("今天是%s的生日，送礼好感翻倍！" % b)
+	if is_lucky():
+		lines.append("【幸运日】收获容易多收，钓鱼容易钓到宝箱")
+	return "\n".join(lines)
 
 
 func _festival_line() -> String:

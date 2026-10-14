@@ -454,6 +454,13 @@ func _run() -> void:
 	var lb0 := int(GameState.stats.get("leaf_piles", 0))
 	piles[0].interact(p)
 	check(int(GameState.stats["leaf_piles"]) == lb0 + 1 and not piles[0].is_in_group("interactable"), "翻落叶堆找到东西")
+	GameState.day = 2  # 春天：藏一棵四叶草
+	GameState.leaf_day = -1
+	main.events.spawn_leaf_piles()
+	var clv = get_tree().get_first_node_in_group("clovers")
+	check(clv != null and get_tree().get_nodes_in_group("leaf_piles").all(func(n): return n.is_queued_for_deletion()), "春天藏一棵四叶草、落叶堆清掉")
+	clv.interact(p)
+	check(GameState.is_lucky() and GameState.festival_text().contains("幸运日"), "找到四叶草变成幸运日")
 	GameState.day = leaf_day0
 	main.events.spawn_leaf_piles()  # 不是秋天了：清掉
 	GameState.stats["fireflies"] = 9

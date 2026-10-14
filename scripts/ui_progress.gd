@@ -101,8 +101,7 @@ func _item_row(ids: Array) -> HBoxContainer:
 		card.add_child(icon)
 		var l: Label = ui._label("%s ×%d" % [GameState.item_name(id), n] if n > 0 else "？？？", 15)
 		if GameState.fish_records.has(id):
-			l.text += "
-最大 %d 厘米" % int(GameState.fish_records[id])
+			l.text += "\n最大 %d 厘米" % int(GameState.fish_records[id])
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		card.add_child(l)
 		hb.add_child(card)
