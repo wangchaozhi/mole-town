@@ -255,7 +255,7 @@ func save_game() -> void:
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
-		"plots": plots, "home": home, "saved_at": Time.get_unix_time_from_system(),
+		"plots": plots, "home": home, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f:
@@ -303,6 +303,14 @@ func load_game() -> bool:
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
+	npc_affinity = {}
+	var na: Dictionary = data.get("npc_affinity", {})
+	for k in na:
+		npc_affinity[str(k)] = int(na[k])
+	npc_gift_day = {}
+	var nd: Dictionary = data.get("npc_gift_day", {})
+	for k in nd:
+		npc_gift_day[str(k)] = int(nd[k])
 	home = []
 	for fe in data.get("home", []):
 		if typeof(fe) == TYPE_DICTIONARY and FURNITURE.has(str(fe.get("id", ""))):
@@ -429,6 +437,8 @@ func reset_game() -> void:
 	home = []
 	offline_seconds = 0.0
 	collection = {}
+	npc_affinity = {}
+	npc_gift_day = {}
 	stats = {}
 	achievements = []
 	raining = false
@@ -456,6 +466,7 @@ const ACHIEVEMENTS := [
 	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 5, "reward": 200},
 	{"id": "lahm_friend", "name": "拉姆的好朋友", "desc": "把拉姆培养到 5 级", "stat": "lahm_level", "target": 5, "reward": 300},
 	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
+	{"id": "popular", "name": "小镇人气王", "desc": "和一位 NPC 成为好朋友（好感 100）", "stat": "max_affinity", "target": 100, "reward": 200},
 ]
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
@@ -495,6 +506,11 @@ func stat_value(stat: String) -> int:
 			return lahm_level
 		"player_level":
 			return player_level
+		"max_affinity":
+			var best := 0
+			for k in npc_affinity:
+				best = maxi(best, int(npc_affinity[k]))
+			return best
 		"hats":
 			return owned_hats.size() - 1
 		"crop_kinds":
@@ -668,3 +684,66 @@ func is_giftable(id: String) -> bool:
 	if id.begins_with("furn_"):
 		return FURNITURE.has(id.substr(5))
 	return false
+
+
+# ---------- NPC 好感度 ----------
+
+const NPC_INFO := {
+	"乐乐": {"likes": ["strawberry", "sunflower"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
+	"店长豆豆": {"likes": ["gold_fish", "watermelon"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
+	"小黄": {"likes": ["corn", "carrot"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
+	"嘟嘟": {"likes": ["big_fish", "small_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
+	"米米": {"likes": ["pumpkin", "strawberry"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
+	"阿呆": {"likes": ["watermelon", "gold_fish"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
+}
+
+var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
+var npc_gift_day: Dictionary = {}  # NPC 名字 -> 上次送礼的游戏日
+
+
+func affinity(npc: String) -> int:
+	return int(npc_affinity.get(npc, 0))
+
+
+func affinity_tier(npc: String) -> String:
+	var a := affinity(npc)
+	if a >= 100:
+		return "好朋友"
+	if a >= 50:
+		return "朋友"
+	if a >= 20:
+		return "熟人"
+	return "陌生"
+
+
+func can_gift_npc(npc: String) -> bool:
+	return NPC_INFO.has(npc) and int(npc_gift_day.get(npc, -1)) != day
+
+
+## 给 NPC 送礼：每个 NPC 每个游戏日 1 次，喜欢的东西好感 +15，其它作物 / 鱼 +5
+func gift_npc(npc: String, item: String) -> Dictionary:
+	if not can_gift_npc(npc):
+		return {"ok": false, "msg": "%s今天已经收过你的礼物啦，明天再来吧" % npc}
+	if not remove_item(item):
+		return {"ok": false, "msg": "背包里没有这个东西"}
+	var liked: bool = item in NPC_INFO[npc]["likes"]
+	var gain := 15 if liked else (5 if CROPS.has(item) or FISH.has(item) else 3)
+	if item == "boot":
+		gain = 1
+	var before := affinity(npc)
+	npc_affinity[npc] = before + gain
+	npc_gift_day[npc] = day
+	var rewards := PackedStringArray()
+	var table: Dictionary = NPC_INFO[npc]["rewards"]
+	for th in table:
+		if before < int(th) and before + gain >= int(th):
+			var r: Array = table[th]
+			if r[0] == "beans":
+				add_beans(int(r[1]))
+				rewards.append("%d 摩尔豆" % int(r[1]))
+			else:
+				add_item(str(r[0]), int(r[1]))
+				rewards.append("%s ×%d" % [item_name(str(r[0])), int(r[1])])
+	add_exp(3)
+	check_achievements()
+	return {"ok": true, "liked": liked, "gain": gain, "rewards": rewards}

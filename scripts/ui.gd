@@ -63,6 +63,7 @@ var gift_panel: PanelContainer
 var gift_list: VBoxContainer
 var gift_title: Label
 var gift_target = null
+var gift_to_npc := false  # true = 送给 NPC（加好感），false = 送给联机好友
 var signin_cards: HBoxContainer
 var signin_button: Button
 var signin_info: Label
@@ -551,6 +552,7 @@ func _build_help() -> void:
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
+		+ "• NPC 好感：每个 NPC 每天可以送一次礼物，送他们喜欢的东西好感涨得快，好感到 20 / 50 / 100 会收到回礼\n" \
 		+ "• 我的小院（农场左边）：在商店「家具」页买家具，背包里点「摆放」装扮小院，点家具可以移动或收起\n" \
 		+ "• 拉姆：你的小宠物，饿了会飞不动，点击它喂食，吃饱了点击是摸摸它；亲密度升级后会帮你抓虫、找宝物、浇水\n" \
 		+ "• 联机：按 N，一人「创建房间」，其他人填房主 IP 后「加入房间」，就能看到彼此、聊天、送摩尔豆\n" \
@@ -797,19 +799,27 @@ func on_npc_interact(npc) -> void:
 			_lele_dialog(npc)
 		"shop":
 			var m := GameState.market()
-			show_dialog(npc.display_name, "欢迎光临摩尔百货！今天%s收购价特别高（×1.5），%s种子打 6 折哦~\n种子、拉姆果、漂亮的帽子，应有尽有，作物和鱼也可以卖给我。" % [GameState.item_name(m["hot"]), GameState.item_name(m["sale"])],
-				[["看看商品", open_shop], ["下次再来", _noop]])
+			show_dialog(_npc_title(npc), "欢迎光临摩尔百货！今天%s收购价特别高（×1.5），%s种子打 6 折哦~\n种子、拉姆果、漂亮的帽子，应有尽有，作物和鱼也可以卖给我。" % [GameState.item_name(m["hot"]), GameState.item_name(m["sale"])],
+				[["看看商品", open_shop], ["送礼物", open_npc_gift.bind(npc)], ["下次再来", _noop]])
 		_:
-			show_dialog(npc.display_name, TIPS.pick_random(), [["再聊聊", on_npc_interact.bind(npc)], ["再见", _noop]])
+			var text: String = TIPS.pick_random()
+			if GameState.affinity(npc.display_name) >= 50 and randf() < 0.4:
+				text = "我们是好朋友啦！悄悄告诉你：" + text
+			show_dialog(_npc_title(npc), text, [["再聊聊", on_npc_interact.bind(npc)], ["送礼物", open_npc_gift.bind(npc)], ["再见", _noop]])
+
+
+func _npc_title(npc) -> String:
+	var n: String = npc.display_name
+	return "%s · %s（好感 %d）" % [n, GameState.affinity_tier(n), GameState.affinity(n)]
 
 
 func _lele_dialog(npc) -> void:
 	if GameState.quest_done():
-		show_dialog(npc.display_name, "哇，你完成了任务！真是能干的小摩尔~ 这是给你的奖励！",
+		show_dialog(_npc_title(npc), "哇，你完成了任务！真是能干的小摩尔~ 这是给你的奖励！",
 			[["领取奖励", _claim_quest.bind(npc)]])
 	else:
-		show_dialog(npc.display_name, "你好呀，小摩尔！能帮我一个忙吗？\n" + GameState.quest_text(),
-			[["交给我吧！", _noop], ["换一个任务（10豆）", _reroll_quest.bind(npc)]])
+		show_dialog(_npc_title(npc), "你好呀，小摩尔！能帮我一个忙吗？\n" + GameState.quest_text(),
+			[["交给我吧！", _noop], ["换一个任务（10豆）", _reroll_quest.bind(npc)], ["送礼物", open_npc_gift.bind(npc)]])
 
 
 func _claim_quest(npc) -> void:
@@ -1544,6 +1554,7 @@ func _build_gift() -> void:
 
 func open_gift(m) -> void:
 	gift_target = m
+	gift_to_npc = false
 	gift_title.text = "送礼物给 %s" % m.display_name
 	_refresh_gift()
 	gift_panel.visible = true
@@ -1561,8 +1572,10 @@ func _refresh_gift() -> void:
 		var l := _label("%s ×%d" % [GameState.item_name(id), GameState.count(id)], 16)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(l)
+		if gift_to_npc and GameState.NPC_INFO.has(gift_target.display_name) and id in GameState.NPC_INFO[gift_target.display_name]["likes"]:
+			l.text += "   ♥ 它很喜欢"
 		hb.add_child(_button("送1个", _give.bind(id, 1)))
-		if GameState.count(id) >= 5:
+		if GameState.count(id) >= 5 and not gift_to_npc:
 			hb.add_child(_button("送5个", _give.bind(id, 5)))
 		gift_list.add_child(hb)
 	if not any:
@@ -1570,6 +1583,9 @@ func _refresh_gift() -> void:
 
 
 func _give(item: String, n: int) -> void:
+	if gift_to_npc:
+		_give_npc(item)
+		return
 	if gift_target == null or not is_instance_valid(gift_target) or not Net.is_online():
 		show_toast("对方已经不在了")
 		gift_panel.visible = false
@@ -1583,3 +1599,42 @@ func _give(item: String, n: int) -> void:
 	add_chat_line("", "【礼物】" + msg, Color(1, 0.8, 0.9))
 	player.play_emote("happy")
 	_refresh_gift()
+
+
+func open_npc_gift(npc) -> void:
+	var n: String = npc.display_name
+	if not GameState.can_gift_npc(n):
+		show_toast("%s今天已经收过你的礼物啦，明天再来吧" % n)
+		return
+	gift_target = npc
+	gift_to_npc = true
+	gift_title.text = "送礼物给 %s（好感 %d）" % [n, GameState.affinity(n)]
+	_refresh_gift()
+	gift_panel.visible = true
+
+
+func _give_npc(item: String) -> void:
+	var npc = gift_target
+	gift_panel.visible = false
+	if npc == null or not is_instance_valid(npc):
+		return
+	var r := GameState.gift_npc(npc.display_name, item)
+	if not r["ok"]:
+		show_toast(r["msg"])
+		return
+	Sfx.play("gift")
+	npc.moving = false
+	npc.idle_timer = 5.0
+	if item == "boot":
+		npc.play_emote("cry")
+		npc.say("呃……破靴子？谢、谢谢……")
+	elif r["liked"]:
+		npc.play_emote("happy")
+		npc.say("哇！我最喜欢%s了！" % GameState.item_name(item))
+	else:
+		npc.play_emote("wave")
+		npc.say("谢谢你的%s~" % GameState.item_name(item))
+	show_toast("%s 好感 +%d（现在 %d）" % [npc.display_name, r["gain"], GameState.affinity(npc.display_name)])
+	for rw in r["rewards"]:
+		show_toast("%s 回赠了你 %s！" % [npc.display_name, rw])
+		add_chat_line("", "【回礼】%s 送给你 %s" % [npc.display_name, rw], Color(1, 0.85, 0.5))
