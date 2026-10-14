@@ -8,7 +8,9 @@ signal hat_changed
 signal toast(text: String)
 signal weather_changed
 
-const BODY_COLORS := ["946644", "a8754f", "8a5a3c", "b38a5e", "9c6b5a", "7d5a44"]
+const BODY_COLORS := ["946644", "a8754f", "8a5a3c", "b38a5e", "9c6b5a", "7d5a44", "c49a6c", "6e4a3a"]
+const RANDOM_NAMES := ["豆豆", "米粒", "团子", "小土豆", "布丁", "可可", "泡芙", "饭团", "糖糖", "栗子", "麻薯", "毛毛"]
+const EMOTE_ORDER := ["wave", "happy", "angry", "cry", "sing", "sleep"]
 const DAY_MINUTES := 1440.0
 const REAL_SECONDS_PER_DAY := 300.0  # 现实 5 分钟 = 游戏 1 天
 
@@ -53,6 +55,7 @@ var ui_theme: Theme
 var save_path := "user://mole_save.json"
 var player_name := ""
 var body_color := ""
+var is_new_player := false  # 第一次进入游戏（还没有存档）
 var help_today: int = 0  # 今天串门帮忙已领奖励的次数
 var music_volume := 0.6
 var sfx_volume := 0.8
@@ -67,6 +70,7 @@ func _ready() -> void:
 		if a.begins_with("--profile="):
 			save_path = "user://mole_save_%s.json" % a.substr(10).validate_filename()
 	if not load_game():
+		is_new_player = true
 		inventory = {"seed_carrot": 5, "lahm_fruit": 2}
 		new_quest()
 	if player_name == "":

@@ -8,6 +8,7 @@ signal roster_changed
 signal peer_moved(id: int, pos: Vector2, target: Vector2, fishing: bool, farm: int)
 signal peer_chat(id: int, text: String)
 signal gift_received(id: int, beans: int)
+signal peer_emote(id: int, kind: String)
 signal visit_changed
 signal farm_visitor_joined(id: int)
 signal farm_received(states: Array)
@@ -294,3 +295,15 @@ func send_weather(r: bool) -> void:
 @rpc("authority", "call_remote", "reliable")
 func weather(r: bool) -> void:
 	GameState.set_raining(r, false)
+
+
+# ---------- 表情 ----------
+
+func send_emote(kind: String) -> void:
+	if is_online():
+		emote.rpc(kind)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func emote(kind: String) -> void:
+	peer_emote.emit(multiplayer.get_remote_sender_id(), str(kind).left(10))

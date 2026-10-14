@@ -35,7 +35,9 @@ func _process(delta: float) -> void:
 	chat_timer -= delta
 	if chat_timer <= 0.0:
 		chat_timer = randf_range(12.0, 28.0)
-		if not lines.is_empty() and not bubble.visible:
+		if randf() < 0.3:
+			play_emote(EMOTES.keys().pick_random())
+		elif not lines.is_empty() and not bubble.visible:
 			say(lines.pick_random())
 
 

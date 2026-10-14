@@ -109,6 +109,9 @@ func _ready() -> void:
 	Net.peer_moved.connect(_on_peer_moved)
 	Net.peer_chat.connect(_on_peer_chat)
 	Net.gift_received.connect(_on_gift)
+	Net.peer_emote.connect(func(id, kind):
+		if remotes.has(id):
+			remotes[id].play_emote(kind))
 	if not GameState.hat_changed.is_connected(Net.send_info):
 		GameState.hat_changed.connect(Net.send_info)
 	var sync := Timer.new()

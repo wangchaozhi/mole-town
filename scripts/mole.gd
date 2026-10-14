@@ -4,6 +4,7 @@ extends Node2D
 signal arrived
 
 const D = preload("res://scripts/draw_util.gd")
+const EMOTES := {"wave": "挥手", "happy": "开心", "angry": "生气", "cry": "难过", "sing": "唱歌", "sleep": "睡觉"}
 
 var body_color := Color(0.58, 0.4, 0.27)
 var display_name := ""
@@ -20,6 +21,8 @@ var bubble_timer := 0.0
 var fishing := false
 var bite := false
 var anim_t := 0.0
+var emote := ""
+var emote_t := 0.0
 
 
 func _ready() -> void:
@@ -82,6 +85,10 @@ func hit_test(p: Vector2) -> bool:
 
 func _process(delta: float) -> void:
 	anim_t += delta
+	if emote_t > 0.0:
+		emote_t -= delta
+		if emote_t <= 0.0:
+			emote = ""
 	if moving:
 		var d := target - position
 		var step := speed * delta
@@ -122,10 +129,19 @@ func _draw() -> void:
 	D.ell(self, c + Vector2(20, 5 - sw * 0.5), Vector2(6, 5), hand)
 
 	var ex := facing * 3.0
+	var eye_col := Color(0.08, 0.05, 0.05)
 	for sx in [-7.0, 7.0]:
 		var e: Vector2 = c + Vector2(sx + ex, -10)
-		draw_circle(e, 3.4, Color(0.08, 0.05, 0.05))
-		draw_circle(e + Vector2(1, -1.2), 1.2, Color.WHITE)
+		if emote == "happy" or emote == "sing":
+			draw_arc(e + Vector2(0, 2), 3.5, PI + 0.3, TAU - 0.3, 8, eye_col, 2.0)  # 眯眼笑 ^ ^
+		elif emote == "sleep":
+			draw_line(e + Vector2(-3.5, 0), e + Vector2(3.5, 0), eye_col, 2.0)
+		elif emote == "angry":
+			draw_circle(e, 3.0, eye_col)
+			draw_line(e + Vector2(-4.5 * signf(sx), -6), e + Vector2(4.5 * signf(sx), -3), eye_col, 2.0)  # 皱眉
+		else:
+			draw_circle(e, 3.4, eye_col)
+			draw_circle(e + Vector2(1, -1.2), 1.2, Color.WHITE)
 	D.ell(self, c + Vector2(-13 + ex, 0), Vector2(4, 2.5), Color(1, 0.5, 0.5, 0.45))
 	D.ell(self, c + Vector2(13 + ex, 0), Vector2(4, 2.5), Color(1, 0.5, 0.5, 0.45))
 
@@ -140,6 +156,8 @@ func _draw() -> void:
 	draw_circle(n + Vector2(-1.8, -1.8), 1.8, Color(1, 0.65, 0.65))
 
 	_draw_hat(c + Vector2(0, -24))
+	if emote != "":
+		_draw_emote(c)
 
 	if fishing:
 		var hand2 := Vector2(facing * 20.0, -26.0)
@@ -151,6 +169,55 @@ func _draw() -> void:
 		draw_line(tip, bob_p, Color(0.95, 0.95, 0.95, 0.8), 1.0)
 		draw_circle(bob_p, 4.5, Color(0.95, 0.2, 0.2))
 		draw_circle(bob_p + Vector2(0, -2), 2.5, Color.WHITE)
+
+
+func play_emote(kind: String) -> void:
+	if not EMOTES.has(kind):
+		return
+	emote = kind
+	emote_t = 3.0
+
+
+func _draw_emote(c: Vector2) -> void:
+	var k := 3.0 - emote_t  # 表情已经播放的时间
+	match emote:
+		"wave":
+			var hand := c + Vector2(facing * 24.0, -14.0 + sin(anim_t * 14.0) * 5.0)
+			D.ell(self, hand, Vector2(6, 6), body_color.darkened(0.1))
+			for i in 2:
+				var r := 12.0 + i * 6.0
+				draw_arc(hand, r, -PI * 0.75, -PI * 0.25, 6, Color(1, 1, 1, 0.8), 2.0)
+		"happy":
+			for i in 3:
+				var ph := fmod(k * 0.8 + i / 3.0, 1.0)
+				D.heart(self, c + Vector2(-16 + i * 16, -40 - ph * 40), 5.0 + ph * 2.0, Color(1, 0.3, 0.45, 1.0 - ph))
+		"angry":
+			D.ell(self, c + Vector2(ex_of(), -6), Vector2(18, 12), Color(1, 0.1, 0.1, 0.25))
+			var m := c + Vector2(20, -44)
+			var col := Color(0.9, 0.1, 0.1)
+			for a in [0.0, PI * 0.5, PI, PI * 1.5]:
+				draw_arc(m + Vector2(cos(a + PI * 0.25), sin(a + PI * 0.25)) * 6.0, 4.0, a + PI * 0.75, a + PI * 1.75, 6, col, 2.5)
+		"cry":
+			for sx in [-7.0, 7.0]:
+				for j in 2:
+					var y := fmod(k * 40.0 + j * 12.0, 24.0)
+					draw_circle(c + Vector2(sx + ex_of(), -5 + y), 2.2, Color(0.4, 0.7, 1.0, 1.0 - y / 24.0))
+		"sing":
+			for i in 2:
+				var ph := fmod(k * 0.6 + i * 0.5, 1.0)
+				var p := c + Vector2(18 + i * 10 + sin(ph * TAU) * 4.0, -40 - ph * 40)
+				var col := Color(0.3, 0.3, 0.9, 1.0 - ph)
+				draw_circle(p, 4.0, col)
+				draw_line(p + Vector2(3.5, 0), p + Vector2(3.5, -14), col, 2.0)
+				draw_line(p + Vector2(3.5, -14), p + Vector2(9, -10), col, 2.0)
+		"sleep":
+			for i in 3:
+				var ph := fmod(k * 0.5 + i / 3.0, 1.0)
+				D.text(self, c + Vector2(16 + ph * 16, -40 - ph * 36), "Z", int(12 + ph * 10), Color(0.35, 0.4, 0.8, 1.0 - ph))
+
+
+func ex_of() -> float:
+	return facing * 3.0
 
 
 func _draw_hat(b: Vector2) -> void:
