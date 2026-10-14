@@ -66,3 +66,13 @@ godot --path . -- --profile=2
 ## 说明
 
 农场、背包和摩尔豆保存在各自电脑上，联机没有防作弊，适合和朋友在局域网里玩。
+
+## 测试
+
+`tests/smoke_test.tscn` 会启动真正的游戏场景，把捏脸、农场、天气、钓鱼、商店、拉姆、任务、等级、小院、NPC 好感、签到、传送、表情和存档读档挨个跑一遍，最后打印结果，失败时退出码为 1：
+
+```bash
+godot --headless --path . res://tests/smoke_test.tscn -- --profile=smoke
+```
+
+测试使用单独的 `smoke` 存档档位，结束后会自动删除，不影响正常存档。
