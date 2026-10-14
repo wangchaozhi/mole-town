@@ -326,3 +326,9 @@ func _run() -> void:
 	check(GameState.load_game(), "读取存档")
 	check(GameState.beans == snapshot["beans"] and GameState.player_level == snapshot["level"] \
 		and GameState.hat == snapshot["hat"] and GameState.player_name == snapshot["name"], "存档读档数据一致")
+	GameState.save_game()  # 再存一次，确保有 .bak
+	var bad := FileAccess.open(GameState.save_path, FileAccess.WRITE)
+	bad.store_string("{\"beans\": ")
+	bad.close()
+	GameState.beans = 0
+	check(GameState.load_game() and GameState.beans == snapshot["beans"] and GameState.loaded_from_backup, "主存档损坏时从备份恢复")

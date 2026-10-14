@@ -121,6 +121,8 @@ func _ready() -> void:
 	_refresh_hud()
 	_refresh_seeds()
 	help_panel.visible = false
+	if GameState.loaded_from_backup:
+		show_toast("存档文件损坏了，已经从上一次的备份恢复")
 	if GameState.is_new_player:
 		open_creator()
 	else:

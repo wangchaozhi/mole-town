@@ -306,20 +306,18 @@ func save_game() -> void:
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
-	var f := FileAccess.open(save_path, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(data))
+	_write_save(JSON.stringify(data))
 
 
 func load_game() -> bool:
-	if not FileAccess.file_exists(save_path):
-		return false
-	var f := FileAccess.open(save_path, FileAccess.READ)
-	if f == null:
-		return false
-	var data = JSON.parse_string(f.get_as_text())
+	var data = _read_save(save_path)
 	if typeof(data) != TYPE_DICTIONARY:
-		return false
+		# 主存档不存在或者坏了：试试上一份备份
+		data = _read_save(save_path + ".bak")
+		if typeof(data) != TYPE_DICTIONARY:
+			return false
+		push_warning("主存档损坏，已从备份恢复")
+		loaded_from_backup = true
 	beans = int(data.get("beans", 100))
 	inventory = {}
 	var inv: Dictionary = data.get("inventory", {})
@@ -486,8 +484,9 @@ func set_raining(r: bool, broadcast: bool = true) -> void:
 
 ## 清空存档重新开始（保留名字、毛色和音量设置）
 func reset_game() -> void:
-	if FileAccess.file_exists(save_path):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+	for p in [save_path, save_path + ".bak", save_path + ".tmp"]:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
 	beans = 100
 	inventory = {"seed_carrot": 5, "lahm_fruit": 2}
 	selected_seed = "carrot"
@@ -1143,3 +1142,43 @@ func claim_weekly() -> bool:
 	if not has_trophy:
 		add_item("furn_trophy")
 	return true
+
+
+# ---------- 存档读写（防损坏） ----------
+
+var loaded_from_backup := false
+
+
+## 先写到临时文件，确认写完整了再把旧存档挪成 .bak、新存档换上来。
+## 这样就算写到一半游戏崩溃 / 断电，原来的存档也还在。
+func _write_save(text: String) -> void:
+	var tmp := save_path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		push_warning("无法写入存档：%s" % tmp)
+		return
+	f.store_string(text)
+	f.close()
+	if _read_save(tmp) == null:
+		push_warning("临时存档校验失败，保留原存档")
+		return
+	var main_file := ProjectSettings.globalize_path(save_path)
+	var bak := main_file + ".bak"
+	if FileAccess.file_exists(save_path):
+		if FileAccess.file_exists(save_path + ".bak"):
+			DirAccess.remove_absolute(bak)
+		DirAccess.rename_absolute(main_file, bak)
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), main_file)
+
+
+## 读出存档里的字典；文件不存在或内容不是合法 JSON 字典时返回 null
+func _read_save(path: String):
+	if not FileAccess.file_exists(path):
+		return null
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return null
+	var json := JSON.new()  # 用实例解析：坏文件不会在控制台刷错误
+	if json.parse(f.get_as_text()) != OK:
+		return null
+	return json.data if typeof(json.data) == TYPE_DICTIONARY else null
