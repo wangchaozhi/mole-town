@@ -74,8 +74,17 @@ func _refresh_collection() -> void:
 		hb.add_child(desc)
 		var prog := "已完成" if done else "%d/%d" % [mini(GameState.stat_value(a["stat"]), int(a["target"])), int(a["target"])]
 		hb.add_child(ui._label(prog + "  · %d豆" % int(a["reward"]), 15))
+		if done:
+			var wearing: bool = GameState.title == a["id"]
+			hb.add_child(ui._button("取下称号" if wearing else "设为称号", _set_title.bind("" if wearing else str(a["id"]))))
 		list.add_child(hb)
 	collection_body.add_child(scroll)
+
+
+func _set_title(id: String) -> void:
+	GameState.set_title(id)
+	ui.show_toast("称号换成了「%s」" % GameState.title_text(id) if id != "" else "取下了称号")
+	_refresh_collection()
 
 
 func _item_row(ids: Array) -> HBoxContainer:

@@ -55,6 +55,26 @@ func _ready() -> void:
 	add_child(bubble)
 
 
+var title_label: Label = null
+
+
+## 名字下面的称号（空字符串就隐藏）
+func set_title_text(t: String) -> void:
+	if title_label == null:
+		title_label = Label.new()
+		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title_label.position = Vector2(-70, 24)
+		title_label.size = Vector2(140, 18)
+		title_label.add_theme_font_size_override("font_size", 12)
+		title_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3))
+		title_label.add_theme_color_override("font_outline_color", Color(0.35, 0.2, 0.05))
+		title_label.add_theme_constant_override("outline_size", 4)
+		title_label.z_index = 5
+		add_child(title_label)
+	title_label.text = "「%s」" % t if t != "" else ""
+	title_label.visible = t != ""
+
+
 func set_display_name(n: String) -> void:
 	display_name = n
 	if name_label != null:

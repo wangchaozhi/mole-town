@@ -74,6 +74,7 @@ var beans: int = 100
 var inventory: Dictionary = {}
 var selected_seed: String = "carrot"
 var hat: String = "none"
+var title: String = ""  # 佩戴的称号（成就 id），显示在名字下面
 var owned_hats: Array = ["none"]
 var lahm_hunger: float = 80.0
 var lahm_exp: int = 0
@@ -319,7 +320,7 @@ func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day,
+		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "day_log": day_log, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
@@ -343,6 +344,7 @@ func load_game() -> bool:
 		inventory[k] = int(inv[k])
 	selected_seed = str(data.get("selected_seed", "carrot"))
 	hat = str(data.get("hat", "none"))
+	title = str(data.get("title", ""))
 	owned_hats = data.get("owned_hats", ["none"])
 	rod_level = clampi(int(data.get("rod_level", 0)), 0, 2)
 	has_sprinkler = bool(data.get("has_sprinkler", false))
@@ -539,6 +541,7 @@ func reset_game() -> void:
 	inventory = {"seed_carrot": 5, "lahm_fruit": 2}
 	selected_seed = "carrot"
 	hat = "none"
+	title = ""
 	owned_hats = ["none"]
 	lahm_acc = "none"
 	owned_lahm_accs = ["none"]
@@ -660,6 +663,19 @@ func record(kind: String, item: String = "", n: int = 1) -> void:
 			collection[item] = int(collection.get(item, 0)) + n
 			stats["cook_total"] = int(stats.get("cook_total", 0)) + n
 	check_achievements()
+
+
+## 称号文字：成就 id -> 成就名；没戴或无效返回 ""
+static func title_text(id: String) -> String:
+	for a in ACHIEVEMENTS:
+		if a["id"] == id:
+			return str(a["name"])
+	return ""
+
+
+func set_title(id: String) -> void:
+	title = id if id in achievements else ""
+	hat_changed.emit()  # 和换帽子一样，触发联机同步
 
 
 func stat_value(stat: String) -> int:

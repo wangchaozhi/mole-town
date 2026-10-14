@@ -18,6 +18,7 @@ func apply_info(info: Dictionary) -> void:
 	body_color = Color.html(str(info["color"]))
 	name_label.add_theme_color_override("font_color", Color(1, 0.95, 0.6))
 	name_label.text = "%s Lv%d" % [display_name, int(info["level"])]
+	set_title_text(GameState.title_text(str(info.get("title", ""))))
 
 
 func net_move(pos: Vector2, to: Vector2, is_fishing: bool) -> void:

@@ -445,6 +445,10 @@ func _run() -> void:
 	GameState.fish_records.erase("big_fish")
 	check(not GameState.record_fish_size("big_fish", 40) and GameState.record_fish_size("big_fish", 45) \
 		and not GameState.record_fish_size("big_fish", 41) and GameState.fish_records["big_fish"] == 45, "鱼的尺寸纪录")
+	GameState.set_title("giant")
+	check(GameState.title == "giant" and p.title_label != null and p.title_label.text.contains("巨无霸"), "佩戴成就称号")
+	GameState.set_title("not_done_xyz")
+	check(GameState.title == "" and not p.title_label.visible, "没达成的成就不能当称号")
 	GameState.day_log = {"harvest": 3, "fish": 2, "earned": 120}
 	var mails0 := GameState.mail.size()
 	GameState._daily_report()

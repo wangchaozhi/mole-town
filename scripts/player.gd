@@ -11,7 +11,10 @@ func _ready() -> void:
 	add_to_group("player")
 	speed = 240.0
 	hat = GameState.hat
-	GameState.hat_changed.connect(func(): hat = GameState.hat)
+	set_title_text(GameState.title_text(GameState.title))
+	GameState.hat_changed.connect(func():
+		hat = GameState.hat
+		set_title_text(GameState.title_text(GameState.title)))
 	rod_color_gold = GameState.rod_level >= 2
 	GameState.tools_changed.connect(func(): rod_color_gold = GameState.rod_level >= 2)
 	arrived.connect(_on_arrived)
