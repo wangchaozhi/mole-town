@@ -773,7 +773,8 @@ func on_npc_interact(npc) -> void:
 		"lele":
 			_lele_dialog(npc)
 		"shop":
-			show_dialog(npc.display_name, "欢迎光临摩尔百货！种子、拉姆果、漂亮的帽子，应有尽有哦~\n作物和鱼也可以卖给我。",
+			var m := GameState.market()
+			show_dialog(npc.display_name, "欢迎光临摩尔百货！今天%s收购价特别高（×1.5），%s种子打 6 折哦~\n种子、拉姆果、漂亮的帽子，应有尽有，作物和鱼也可以卖给我。" % [GameState.item_name(m["hot"]), GameState.item_name(m["sale"])],
 				[["看看商品", open_shop], ["下次再来", _noop]])
 		_:
 			show_dialog(npc.display_name, TIPS.pick_random(), [["再聊聊", on_npc_interact.bind(npc)], ["再见", _noop]])
@@ -837,8 +838,9 @@ func _populate_shop() -> void:
 		"seeds":
 			for id in GameState.CROPS:
 				var c: Dictionary = GameState.CROPS[id]
-				var price: int = c["seed_price"]
-				var info := "%s种子   %d豆\n约%d秒成熟 · 售价%d豆" % [c["name"], price, int(c["grow_time"]), c["sell"]]
+				var price := GameState.seed_price(id)
+				var tag := "  【今日特价 6 折】" if GameState.market()["sale"] == id else ""
+				var info := "%s种子   %d豆%s\n约%d秒成熟 · 今日收购价%d豆" % [c["name"], price, tag, int(c["grow_time"]), GameState.sell_price(id)]
 				if GameState.is_unlocked(id):
 					_shop_row(info, [["买1个", _buy.bind("seed_" + id, price, 1)], ["买5个", _buy.bind("seed_" + id, price, 5)]])
 				else:
@@ -849,7 +851,11 @@ func _populate_shop() -> void:
 				var p := GameState.sell_price(id)
 				if p > 0:
 					any = true
-					_shop_row("%s ×%d   单价%d豆" % [GameState.item_name(id), GameState.count(id), p],
+					var trend := ""
+					if GameState.CROPS.has(id):
+						var mlt := GameState.price_mult(id)
+						trend = "  【今日热门】" if GameState.market()["hot"] == id else ("  ↑" if mlt > 1.01 else ("  ↓" if mlt < 0.99 else ""))
+					_shop_row("%s ×%d   单价%d豆%s" % [GameState.item_name(id), GameState.count(id), p, trend],
 						[["卖1个", _sell.bind(id, 1)], ["全部卖出", _sell.bind(id, -1)]])
 			if not any:
 				shop_list.add_child(_label("没有可以卖的东西。去农场种菜或者去湖边钓鱼吧！", 16))

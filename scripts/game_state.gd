@@ -102,7 +102,8 @@ func _process(delta: float) -> void:
 		minutes -= DAY_MINUTES
 		help_today = 0
 		day += 1
-		toast.emit("新的一天开始了！第 %d 天" % day)
+		var m := market()
+		toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * (0.2 if lahm_level >= 2 else 0.25))
 	_update_weather(delta)
 
@@ -132,7 +133,7 @@ func item_name(id: String) -> String:
 
 func sell_price(id: String) -> int:
 	if CROPS.has(id):
-		return CROPS[id]["sell"]
+		return maxi(1, roundi(int(CROPS[id]["sell"]) * price_mult(id)))
 	if FISH.has(id):
 		return FISH[id]["sell"]
 	return 0
@@ -600,3 +601,37 @@ func is_unlocked(crop: String) -> bool:
 
 func hat_unlocked(id: String) -> bool:
 	return player_level >= int(HATS[id].get("level", 1))
+
+
+# ---------- 每日行情（按游戏天数，每天不同） ----------
+
+var _market_day := -1
+var _market := {}
+
+
+## {"mult": {作物: 收购价倍率}, "hot": 今日热门收购作物, "sale": 今日特价种子}
+func market() -> Dictionary:
+	if _market_day == day:
+		return _market
+	var r := RandomNumberGenerator.new()
+	r.seed = hash(day * 7919 + 13)
+	var mult := {}
+	for c in CROPS:
+		mult[c] = snappedf(r.randf_range(0.8, 1.25), 0.05)
+	var keys: Array = CROPS.keys()
+	var hot: String = keys[r.randi() % keys.size()]
+	mult[hot] = 1.5
+	var unlocked: Array = keys.filter(func(c): return is_unlocked(c) and c != hot)
+	var sale: String = unlocked[r.randi() % unlocked.size()] if unlocked.size() > 0 else keys[0]
+	_market = {"mult": mult, "hot": hot, "sale": sale}
+	_market_day = day
+	return _market
+
+
+func price_mult(crop: String) -> float:
+	return float(market()["mult"].get(crop, 1.0))
+
+
+func seed_price(crop: String) -> int:
+	var base := int(CROPS[crop]["seed_price"])
+	return maxi(1, roundi(base * 0.6)) if market()["sale"] == crop else base
