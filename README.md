@@ -57,11 +57,16 @@ godot --path . -- --profile=2
 | `scripts/sfx.gd` | 自动加载：代码合成的音效、背景音乐、雨声 |
 | `scripts/rain.gd` | 下雨画面效果 |
 | `scripts/main.gd` | 搭建场景、处理点击、昼夜变化、远程玩家管理 |
-| `scripts/ui.gd` | 所有界面：状态栏、商店、背包、对话、钓鱼、联机面板 |
+| `scripts/ui.gd` | 界面主体：状态栏、背包、对话、聊天、钓鱼、联机面板、小地图，并创建下面几个界面模块 |
+| `scripts/ui_shop.gd` | 摩尔百货界面 |
+| `scripts/ui_progress.gd` | 图鉴、成就、每日签到 |
+| `scripts/ui_activities.gd` | 送礼物、接果子小游戏、留言板 |
+| `scripts/ui_profile.gd` | 设置、表情栏、捏脸 |
 | `scripts/mole.gd` | 摩尔角色基类（绘制、走路、气泡、钓鱼姿势） |
 | `scripts/player.gd` / `npc.gd` / `remote_mole.gd` | 玩家、NPC、其他联机玩家 |
 | `scripts/plot.gd` | 农田（含串门时显示好友农田） |
 | `scripts/furniture.gd` | 小院家具（绘制、移动、收起） |
+| `scripts/minimap.gd` / `minigame.gd` / `gate.gd` / `board.gd` / `festival_deco.gd` | 小地图、接果子小游戏、城堡大门、留言板、节日装饰 |
 | `scripts/lahm.gd` / `pond.gd` / `prop.gd` / `world.gd` | 拉姆、钓鱼湖、建筑装饰、地面 |
 
 新增作物：在 `game_state.gd` 的 `CROPS` 里加一行，再在 `plot.gd` 的 `_draw_ripe` 里画出成熟的样子。

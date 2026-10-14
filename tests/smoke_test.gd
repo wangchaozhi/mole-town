@@ -52,9 +52,9 @@ func _run() -> void:
 	var p = main.player
 
 	print("[捏脸]")
-	ui.creator_name.text = "测试员"
-	ui._pick_color(GameState.BODY_COLORS[2])
-	ui._finish_creator()
+	ui.profile.creator_name.text = "测试员"
+	ui.profile._pick_color(GameState.BODY_COLORS[2])
+	ui.profile._finish_creator()
 	ui._close_all()
 	check(GameState.player_name == "测试员", "名字已保存")
 	check(p.display_name == "测试员", "玩家头顶名字更新")
@@ -245,7 +245,7 @@ func _run() -> void:
 	ui.help_panel.visible = true
 	await _frames(2)
 	ui._close_all()
-	ui.creator_panel.visible = false
+	ui.profile.creator_panel.visible = false
 	check(not ui.help_panel.visible and not ui.bag_panel.visible, "所有面板都能打开和关闭")
 	var xiaohuang = null
 	for n in get_tree().get_nodes_in_group("npcs"):
