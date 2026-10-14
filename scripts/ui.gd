@@ -526,7 +526,7 @@ func _build_help() -> void:
 	var l := _label("", 16)
 	l.custom_minimum_size = Vector2(600, 0)
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
-	l.text = "• 鼠标左键点击地面走路，点击人物 / 物体互动\n" \
+	l.text = "• 鼠标左键点击地面走路，点击人物 / 物体互动；也可以用 WASD / 方向键走路，按 F 和身边的东西互动\n" \
 		+ "• 开心农场（右下）：在底部选好种子，点空地播种；点作物浇水（生长加速）；成熟后点击收获；有虫子时点击抓虫\n" \
 		+ "• 钓鱼湖（左下）：点击湖面开始钓鱼，鱼上钩后，红色标记在绿色区域内时按空格收杆\n" \
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
@@ -672,6 +672,9 @@ func _input(event) -> void:
 			toggle_net()
 		KEY_E:
 			toggle_emotes()
+		KEY_F:
+			if player != null and not fishing:
+				player.interact_nearest()
 		KEY_C:
 			toggle_collection()
 		KEY_H:
