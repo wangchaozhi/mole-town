@@ -432,6 +432,12 @@ func _run() -> void:
 	GameState.fish_records.erase("big_fish")
 	check(not GameState.record_fish_size("big_fish", 40) and GameState.record_fish_size("big_fish", 45) \
 		and not GameState.record_fish_size("big_fish", 41) and GameState.fish_records["big_fish"] == 45, "鱼的尺寸纪录")
+	GameState.day_log = {"harvest": 3, "fish": 2, "earned": 120}
+	var mails0 := GameState.mail.size()
+	GameState._daily_report()
+	check(GameState.day_log.is_empty() and GameState.mail.size() > mails0 and str(GameState.mail[-1]["text"]).contains("收获了 3 个作物"), "每天早上收到昨日小结")
+	GameState._daily_report()
+	check(GameState.mail.size() == mini(mails0 + 1, 20), "什么都没做的日子不发小结")
 	var bday_day0 := GameState.day
 	GameState.day = 17 + 28  # 第二年嘟嘟的生日
 	check(GameState.birthday_npc() == "嘟嘟" and GameState.festival_text().contains("嘟嘟的生日"), "NPC 生日按 28 天一年循环")

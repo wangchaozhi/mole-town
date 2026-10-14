@@ -100,6 +100,7 @@ var catch_day: int = -1
 var catch_plays: int = 0  # 今天已领奖的小游戏次数
 var input_locked := false  # 小游戏进行中时禁止角色移动
 var collection: Dictionary = {}  # 物品 id -> 累计获得数量（图鉴）
+var day_log: Dictionary = {}  # 今天的小结：harvest / fish / cook / help / earned，第二天早上写进「小镇日报」
 var fish_records: Dictionary = {}  # 鱼 id -> 钓到过的最大尺寸（厘米）
 var stats: Dictionary = {}  # harvest_total / fish_total / help_total / visits
 var achievements: Array = []  # 已解锁的成就 id
@@ -205,6 +206,8 @@ func remove_item(id: String, n: int = 1) -> bool:
 
 func add_beans(n: int) -> void:
 	beans += n
+	if n > 0:
+		day_log["earned"] = int(day_log.get("earned", 0)) + n
 	if n > 0:
 		Sfx.play("coin")
 	beans_changed.emit()
@@ -316,7 +319,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "day_log": day_log, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -372,6 +375,10 @@ func load_game() -> bool:
 	var col: Dictionary = data.get("collection", {})
 	for k in col:
 		collection[k] = int(col[k])
+	day_log = {}
+	var td: Dictionary = data.get("day_log", {})
+	for k in td:
+		day_log[k] = int(td[k])
 	fish_records = {}
 	var fr: Dictionary = data.get("fish_records", {})
 	for k in fr:
@@ -549,6 +556,7 @@ func reset_game() -> void:
 	home = []
 	offline_seconds = 0.0
 	collection = {}
+	day_log = {}
 	fish_records = {}
 	npc_affinity = {}
 	npc_gift_day = {}
@@ -622,6 +630,8 @@ func record_fish_size(id: String, cm: int) -> bool:
 
 
 func record(kind: String, item: String = "", n: int = 1) -> void:
+	if kind in ["harvest", "fish", "help", "cook"] and not (kind == "fish" and item == "boot"):
+		day_log[kind] = int(day_log.get(kind, 0)) + n
 	match kind:
 		"harvest":
 			collection[item] = int(collection.get(item, 0)) + n
@@ -1103,6 +1113,7 @@ func _start_new_day() -> void:
 	help_today = 0
 	day += 1
 	_sync_week()
+	_daily_report()
 	_daily_mail()
 	if season() != old_season:
 		season_changed.emit()
@@ -1378,6 +1389,20 @@ func open_mail(i: int) -> String:
 
 
 ## 每天早上：一半概率收到某位 NPC 的信（好感越高礼物越好）；新的一周国王会来信
+## 新的一天早上：把昨天的小结写成一封「小镇日报」放进信箱（昨天什么都没做就不发）
+func _daily_report() -> void:
+	var parts := PackedStringArray()
+	for k in [["harvest", "收获了 %d 个作物"], ["fish", "钓到 %d 条鱼"], ["cook", "做了 %d 道菜"], ["help", "帮好友干了 %d 次活"], ["earned", "一共赚了 %d 摩尔豆"]]:
+		var v := int(day_log.get(k[0], 0))
+		if v > 0:
+			parts.append(str(k[1]) % v)
+	day_log = {}
+	if parts.is_empty():
+		return
+	var praise := "真是勤劳的一天！" if parts.size() >= 3 else "今天也要加油哦~"
+	add_mail("小镇日报", "第 %d 天小结：你%s。%s" % [day - 1, "，".join(parts), praise])
+
+
 func _daily_mail() -> void:
 	var tomorrow := birthday_npc(day + 1)
 	if tomorrow != "":
