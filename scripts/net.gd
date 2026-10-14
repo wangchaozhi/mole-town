@@ -153,6 +153,7 @@ func register(info) -> void:
 	var id := multiplayer.get_remote_sender_id()
 	players[id] = _clean(info)
 	weather.rpc_id(id, GameState.raining)
+	clock.rpc_id(id, GameState.minutes)
 	sync_board.rpc_id(id, GameState.board)
 	_broadcast_roster()
 
@@ -392,6 +393,10 @@ var _host_port := 0
 
 func _process(delta: float) -> void:
 	if is_online() and multiplayer.is_server():
+		_clock_timer -= delta
+		if _clock_timer <= 0.0:
+			_clock_timer = 30.0
+			clock.rpc(GameState.minutes)
 		_beacon_timer -= delta
 		if _beacon_timer <= 0.0:
 			_beacon_timer = 1.0
@@ -449,3 +454,15 @@ func _poll_rooms() -> void:
 			changed = true
 	if changed:
 		rooms_changed.emit()
+
+
+# ---------- 时间同步 ----------
+# 房主的钟点为准：新玩家加入时同步一次，之后每 30 秒校准一次，大家看到的白天黑夜一致。
+# （只同步一天中的时刻，不同步日期，每个人的季节 / 节日进度还是自己的）
+
+var _clock_timer := 30.0
+
+
+@rpc("authority", "call_remote", "reliable")
+func clock(m: float) -> void:
+	GameState.minutes = clampf(m, 0.0, GameState.DAY_MINUTES - 0.01)
