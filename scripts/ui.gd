@@ -925,6 +925,13 @@ func _reel() -> void:
 		_fish_end("拉得太早了，鱼被吓跑了！")
 	elif fish_phase == 1:
 		if fish_marker >= fish_zone.x and fish_marker <= fish_zone.x + fish_zone.y:
+			var lucky := randf()
+			if lucky < 0.03:
+				_fish_treasure()
+				return
+			if lucky < 0.09:
+				_fish_bottle()
+				return
 			var id := _roll_fish()
 			GameState.add_item(id)
 			GameState.record("fish", id)
@@ -1167,3 +1174,47 @@ func apply_ui_scale() -> void:
 func set_ui_scale(s: float) -> void:
 	GameState.ui_scale = s
 	apply_ui_scale()
+
+
+# ---------- 钓鱼的稀有收获 ----------
+
+const BOTTLE_NOTES := [
+	"今天的晚霞好美，希望捡到这个瓶子的你也开心！",
+	"听说在湖边许愿很灵哦~",
+	"我在湖的另一边种了好多向日葵，有空来看看！",
+	"给拉姆多喂点拉姆果，它会长得更快哦。",
+	"如果你看到这张纸条，说明我们有缘！",
+]
+
+
+## 宝箱：一大笔摩尔豆，有时还有一件家具
+func _fish_treasure() -> void:
+	var beans_ := randi_range(100, 200)
+	GameState.add_beans(beans_)
+	var extra := ""
+	if randf() < 0.5:
+		var shop_furn: Array = GameState.FURNITURE.keys().filter(func(k): return GameState.FURNITURE[k].get("shop", true))
+		var furn: String = shop_furn.pick_random()
+		GameState.add_item("furn_" + furn)
+		extra = "，还有一件%s" % GameState.FURNITURE[furn]["name"]
+	GameState.record("treasure")
+	Sfx.play("catch")
+	_fish_end("哇！钓上来一个宝箱！里面有 %d 摩尔豆%s！" % [beans_, extra])
+	if player != null:
+		player.play_emote("happy")
+
+
+## 漂流瓶：一张纸条（优先用留言板上的真实留言）和一点小礼物
+func _fish_bottle() -> void:
+	var note: String = BOTTLE_NOTES.pick_random()
+	var who := "远方的小摩尔"
+	var board := Net.current_board()
+	if not board.is_empty() and randf() < 0.7:
+		var m: Dictionary = board.pick_random()
+		note = str(m["text"])
+		who = str(m["name"])
+	var gift := randi_range(20, 60)
+	GameState.add_beans(gift)
+	Sfx.play("gift")
+	_fish_end("钓到一个漂流瓶！里面的纸条写着：")
+	show_dialog("漂流瓶", "「%s」\n—— %s\n\n瓶子里还有 %d 摩尔豆。" % [note, who, gift], [["收好", _noop]])

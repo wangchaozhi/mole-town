@@ -552,6 +552,7 @@ const ACHIEVEMENTS := [
 	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
 	{"id": "popular", "name": "小镇人气王", "desc": "和一位 NPC 成为好朋友（好感 100）", "stat": "max_affinity", "target": 100, "reward": 200},
 	{"id": "catcher", "name": "接果子高手", "desc": "在接果子小游戏里拿到 40 分", "stat": "best_catch", "target": 40, "reward": 150},
+	{"id": "lucky", "name": "幸运儿", "desc": "钓鱼时钓到一个宝箱", "stat": "treasures", "target": 1, "reward": 100},
 	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
 	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
 ]
@@ -580,6 +581,9 @@ func record(kind: String, item: String = "", n: int = 1) -> void:
 		"visit":
 			stats["visits"] = int(stats.get("visits", 0)) + n
 			add_exp(5)
+		"treasure":
+			stats["treasures"] = int(stats.get("treasures", 0)) + n
+			add_exp(20)
 		"cook":
 			collection[item] = int(collection.get(item, 0)) + n
 			stats["cook_total"] = int(stats.get("cook_total", 0)) + n

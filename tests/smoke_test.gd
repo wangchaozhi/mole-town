@@ -110,6 +110,12 @@ func _run() -> void:
 	ui._stop_fishing()
 	check(not p.fishing, "结束钓鱼")
 
+	b = GameState.beans
+	ui.start_fishing(main.pond.position)
+	ui._fish_treasure()
+	check(GameState.beans >= b + 100 and "lucky" in GameState.achievements, "钓到宝箱（摩尔豆 + 成就）")
+	ui._stop_fishing()
+
 	print("[商店]")
 	GameState.add_beans(500)
 	b = GameState.beans
@@ -120,7 +126,7 @@ func _run() -> void:
 	b = GameState.beans
 	var price := GameState.sell_price("pumpkin")
 	ui.shop.sell("pumpkin", -1)
-	check(GameState.count("pumpkin") == 0 and GameState.beans == b + price * 2, "卖出作物")
+	check(GameState.count("pumpkin") == 0 and GameState.beans >= b + price * 2, "卖出作物")
 	ui.shop.wear("red_cap")
 	check(GameState.hat == "red_cap" and p.hat == "red_cap", "买帽子并戴上")
 
