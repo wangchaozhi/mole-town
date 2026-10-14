@@ -124,6 +124,8 @@ func _process(delta: float) -> void:
 		day += 1
 		var m := market()
 		toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
+		if festival() != "":
+			toast.emit(festival_text() + "！")
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * (0.2 if lahm_level >= 2 else 0.25))
 	_update_weather(delta)
 
@@ -155,7 +157,8 @@ func item_name(id: String) -> String:
 
 func sell_price(id: String) -> int:
 	if CROPS.has(id):
-		return maxi(1, roundi(int(CROPS[id]["sell"]) * price_mult(id)))
+		var fest := 1.3 if festival() == "harvest" else 1.0
+		return maxi(1, roundi(int(CROPS[id]["sell"]) * price_mult(id) * fest))
 	if FISH.has(id):
 		return FISH[id]["sell"]
 	return 0
@@ -258,7 +261,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "best_catch": best_catch, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -295,6 +298,8 @@ func load_game() -> bool:
 	quests_done = int(data.get("quests_done", 0))
 	help_today = int(data.get("help_today", 0))
 	best_catch = int(data.get("best_catch", 0))
+	contest_day = int(data.get("contest_day", -1))
+	contest_count = int(data.get("contest_count", 0))
 	catch_day = int(data.get("catch_day", -1))
 	catch_plays = int(data.get("catch_plays", 0))
 	collection = {}
@@ -800,3 +805,59 @@ func add_board_message(who: String, text: String, d: int) -> void:
 	board.append({"name": who.left(10), "text": text.strip_edges().left(40), "day": d})
 	while board.size() > BOARD_MAX:
 		board.pop_front()
+
+
+# ---------- 节日 ----------
+# 每 7 天一个循环：第 7、14…天是「钓鱼大赛」，第 3、10…天是「丰收节」
+
+const CONTEST_PRIZES := {5: ["beans", 100], 10: ["beans", 200], 15: ["gold_fish", 1]}
+
+var contest_day := -1
+var contest_count := 0
+
+
+func festival() -> String:
+	if day % 7 == 0:
+		return "fishing"
+	if day % 7 == 3:
+		return "harvest"
+	return ""
+
+
+func festival_name() -> String:
+	return {"fishing": "钓鱼大赛", "harvest": "丰收节"}.get(festival(), "")
+
+
+func festival_text() -> String:
+	match festival():
+		"fishing":
+			var n := contest_count if contest_day == day else 0
+			var next := 0
+			for th in CONTEST_PRIZES:
+				if n < int(th):
+					next = int(th)
+					break
+			return "今天是【钓鱼大赛】已钓 %d 条%s" % [n, "，钓到 %d 条有奖" % next if next > 0 else "，全部奖励已领取！"]
+		"harvest":
+			return "今天是【丰收节】作物收购价 +30%，每次收获多 1 个"
+	return ""
+
+
+## 钓鱼大赛：每钓到一条鱼调用一次，达到 5 / 10 / 15 条时发奖
+func contest_catch() -> void:
+	if festival() != "fishing":
+		return
+	if contest_day != day:
+		contest_day = day
+		contest_count = 0
+	contest_count += 1
+	if CONTEST_PRIZES.has(contest_count):
+		var prize: Array = CONTEST_PRIZES[contest_count]
+		if prize[0] == "beans":
+			add_beans(int(prize[1]))
+			toast.emit("钓鱼大赛：钓到 %d 条，获得 %d 摩尔豆！" % [contest_count, int(prize[1])])
+		else:
+			add_item(str(prize[0]), int(prize[1]))
+			toast.emit("钓鱼大赛：钓到 %d 条，获得冠军奖品 %s！" % [contest_count, item_name(str(prize[0]))])
+		add_exp(20)
+		Sfx.play("catch")

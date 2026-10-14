@@ -185,6 +185,26 @@ func _run() -> void:
 	check(ui.board_panel.visible and ui.board_list.get_child_count() > 0, "打开留言板")
 	ui._close_all()
 
+	print("[节日]")
+	var day0: int = GameState.day
+	GameState.day = 7
+	check(GameState.festival() == "fishing", "第 7 天是钓鱼大赛")
+	b = GameState.beans
+	for i in 5:
+		GameState.contest_catch()
+	check(GameState.contest_count == 5 and GameState.beans == b + 100, "钓鱼大赛钓到 5 条奖励 100 摩尔豆")
+	GameState.day = 10
+	check(GameState.festival() == "harvest", "第 10 天是丰收节")
+	var base_price := roundi(int(GameState.CROPS["carrot"]["sell"]) * GameState.price_mult("carrot"))
+	check(GameState.sell_price("carrot") > base_price, "丰收节收购价上涨")
+	var c0 := GameState.count("carrot")
+	plot.crop = "carrot"
+	plot.growth = 1.0
+	plot.bug = false
+	plot.interact(p)
+	check(GameState.count("carrot") >= c0 + 2, "丰收节收获至少 2 个")
+	GameState.day = day0
+
 	print("[存档]")
 	GameState.save_game()
 	var snapshot := {"beans": GameState.beans, "level": GameState.player_level, "hat": GameState.hat, "name": GameState.player_name}

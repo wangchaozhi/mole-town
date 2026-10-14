@@ -24,6 +24,7 @@ var time_label: Label
 var quest_label: Label
 var hunger_bar: ProgressBar
 var lahm_info: Label
+var fest_label: Label
 var level_label: Label
 var exp_bar: ProgressBar
 var seed_buttons := {}
@@ -223,6 +224,11 @@ func _build_hud() -> void:
 	quest_label.custom_minimum_size = Vector2(260, 0)
 	quest_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	v.add_child(quest_label)
+	fest_label = _label("", 14)
+	fest_label.add_theme_color_override("font_color", Color(0.85, 0.25, 0.15))
+	fest_label.custom_minimum_size = Vector2(260, 0)
+	fest_label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	v.add_child(fest_label)
 	online_label = _label("", 14)
 	online_label.add_theme_color_override("font_color", Color(0.15, 0.5, 0.8))
 	v.add_child(online_label)
@@ -657,6 +663,9 @@ func show_toast(text: String) -> void:
 func _process(delta: float) -> void:
 	time_label.text = GameState.time_text()
 	hunger_bar.value = GameState.lahm_hunger
+	if Engine.get_process_frames() % 20 == 0:
+		fest_label.text = GameState.festival_text()
+		fest_label.visible = fest_label.text != ""
 	var lv := GameState.player_level
 	if lv >= GameState.MAX_LEVEL:
 		level_label.text = "Lv%d（满级）" % lv
@@ -1024,6 +1033,8 @@ func _reel() -> void:
 			var id := _roll_fish()
 			GameState.add_item(id)
 			GameState.record("fish", id)
+			if id != "boot":
+				GameState.contest_catch()
 			if id == "boot":
 				Sfx.play("fail")
 				_fish_end("钓上来一只……破靴子？！")
@@ -1036,13 +1047,18 @@ func _reel() -> void:
 			_fish_end("没拉住，鱼跑掉了！")
 
 
+func _fish_weight(id: String) -> int:
+	var w := int(GameState.FISH[id]["weight"])
+	return w * 2 if id == "gold_fish" and GameState.festival() == "fishing" else w
+
+
 func _roll_fish() -> String:
 	var total := 0
 	for id in GameState.FISH:
-		total += int(GameState.FISH[id]["weight"])
+		total += _fish_weight(id)
 	var r := randi() % total
 	for id in GameState.FISH:
-		r -= int(GameState.FISH[id]["weight"])
+		r -= _fish_weight(id)
 		if r < 0:
 			return id
 	return "small_fish"
