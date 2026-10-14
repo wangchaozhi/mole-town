@@ -632,6 +632,7 @@ func _handle_zoom(event: InputEvent) -> bool:
 func _build_cottage() -> void:
 	_prop("cottage", COTTAGE_POS, "我的小屋")
 	_spot("home_door", COTTAGE_POS)
+	_spot("mailbox", COTTAGE_POS + Vector2(-100, 30))
 	add_child(Interior.new())
 	var room := Interior.ROOM
 	_spot("exit_door", Vector2(room.get_center().x, room.end.y - 4))
@@ -724,6 +725,8 @@ func home_action(kind: String) -> void:
 			opts.append(["给拉姆换饰品", _lahm_wardrobe])
 			opts.append(["关上衣柜", ui._noop])
 			ui.show_dialog("衣柜", "今天戴哪顶帽子？（新帽子可以在摩尔百货买）", opts)
+		"mailbox":
+			ui.open_mail()
 		"shelf":
 			var st: Dictionary = GameState.stats
 			ui.show_dialog("奖杯架", "成就 %d / %d　等级 Lv%d\n累计收获 %d 个作物 · 钓到 %d 条鱼 · 做了 %d 道菜 · 接果子最高 %d 分" % [

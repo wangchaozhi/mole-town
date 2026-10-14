@@ -59,6 +59,7 @@ var progress  # ui_progress.gd：图鉴、成就、签到
 var minimap_panel: PanelContainer
 var act  # ui_activities.gd：送礼物、小游戏、留言板
 var kitchen  # ui_kitchen.gd：烹饪
+var mailui  # ui_mail.gd：信箱
 var visit_bar: PanelContainer
 var visit_label: Label
 
@@ -108,6 +109,10 @@ func _ready() -> void:
 	kitchen.ui = self
 	add_child(kitchen)
 	kitchen.build()
+	mailui = preload("res://scripts/ui_mail.gd").new()
+	mailui.ui = self
+	add_child(mailui)
+	mailui.build()
 	_build_help()
 	_build_toast()
 	Net.status_changed.connect(func(_t): _refresh_net())
@@ -555,6 +560,7 @@ func _build_help() -> void:
 		+ "• 摩尔百货（右上）：找店长买种子、拉姆果、帽子，也能卖掉收获的作物和鱼\n" \
 		+ "• 乐乐（广场）：领取任务，完成后回来领摩尔豆奖励\n" \
 		+ "• 我的小屋（钓鱼湖和小院之间）：进门后可以上床睡觉（晚上 8 点后直接睡到早上）、在衣柜换帽子、看奖杯架\n" \
+		+ "• 信箱（小屋门口）：小镇的朋友们偶尔会寄信来，拆信可以收到小礼物\n" \
 		+ "• 小厨房（广场左边）：用作物和鱼做菜，菜卖得更贵，也是拉姆和 NPC 最爱的礼物\n" \
 		+ "• 留言板（广场右边）：贴一张留言，联机时所有人都能看到\n" \
 		+ "• NPC 好感：每个 NPC 每天可以送一次礼物，送他们喜欢的东西好感涨得快，好感到 20 / 50 / 100 会收到回礼\n" \
@@ -702,6 +708,7 @@ func _close_all() -> void:
 	progress.close()
 	act.close()
 	kitchen.close()
+	mailui.close()
 	if fishing:
 		_stop_fishing()
 
@@ -1139,3 +1146,7 @@ func take_screenshot() -> String:
 	Sfx.play("pop")
 	show_toast("截图已保存：" + ProjectSettings.globalize_path(path))
 	return path
+
+
+func open_mail() -> void:
+	mailui.open()

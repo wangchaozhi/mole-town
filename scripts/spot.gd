@@ -8,6 +8,8 @@ var kind := "home_door"
 
 func _ready() -> void:
 	add_to_group("interactable")
+	if kind == "mailbox":
+		GameState.mail_changed.connect(queue_redraw)
 
 
 func hit_test(p: Vector2) -> bool:
@@ -18,6 +20,7 @@ func hit_test(p: Vector2) -> bool:
 		"bed": Rect2(-50, -60, 100, 66),
 		"wardrobe": Rect2(-34, -110, 68, 112),
 		"shelf": Rect2(-44, -100, 88, 80),
+		"mailbox": Rect2(-20, -64, 40, 66),
 	}[kind]
 	return Rect2(position + r.position, r.size).has_point(p)
 
@@ -56,5 +59,17 @@ func _draw() -> void:
 				draw_colored_polygon(PackedVector2Array([p + Vector2(-6, 0), p + Vector2(6, 0), p + Vector2(4, -10), p + Vector2(-4, -10)]), Color(1, 0.82, 0.2))
 				draw_rect(Rect2(p + Vector2(-3, -14), Vector2(6, 4)), Color(1, 0.82, 0.2))
 			D.text(self, Vector2(0, -116), "奖杯架 %d" % n, 13, Color(0.45, 0.3, 0.2))
+		"mailbox":
+			draw_rect(Rect2(-3, -36, 6, 36), Color(0.5, 0.33, 0.2))
+			draw_rect(Rect2(-15, -58, 30, 24), Color(0.2, 0.5, 0.85))
+			draw_circle(Vector2(0, -58), 15.0, Color(0.2, 0.5, 0.85))
+			draw_rect(Rect2(-11, -52, 22, 4), Color(0.12, 0.3, 0.55))
+			var unread := GameState.unread_mail()
+			if unread > 0:
+				draw_rect(Rect2(13, -76, 3, 22), Color(0.9, 0.15, 0.15))
+				draw_rect(Rect2(13, -76, 12, 8), Color(0.9, 0.15, 0.15))
+				D.text(self, Vector2(0, -88), "%d 封新信" % unread, 12, Color(0.85, 0.15, 0.15))
+			else:
+				draw_rect(Rect2(13, -50, 12, 3), Color(0.9, 0.15, 0.15))
 		"exit_door", "castle_exit":
 			D.text(self, Vector2(0, -2), "出门", 13, Color(1, 0.95, 0.85))

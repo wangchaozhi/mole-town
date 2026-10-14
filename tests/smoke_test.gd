@@ -293,6 +293,17 @@ func _run() -> void:
 	main.exit_room()
 	check(not main.inside and p.position.distance_to(main.ROOMS["castle"]["exit"]) < 1.0, "走出城堡回到大门口")
 
+	print("[信箱]")
+	var mail0: int = GameState.mail.size()
+	GameState.add_mail("乐乐", "测试信件", "lahm_fruit", 2)
+	check(GameState.mail.size() == mail0 + 1 and GameState.unread_mail() >= 1, "收到新信")
+	var fruit0 := GameState.count("lahm_fruit")
+	GameState.open_mail(GameState.mail.size() - 1)
+	check(GameState.count("lahm_fruit") == fruit0 + 2 and GameState.open_mail(GameState.mail.size() - 1) == "", "拆信收礼物，不能重复领")
+	ui.open_mail()
+	check(ui.mailui.panel.visible, "打开信箱")
+	ui._close_all()
+
 	print("[界面]")
 	# 把每个面板都打开关上一遍，界面代码里的错误会以 SCRIPT ERROR 出现在日志里
 	ui.open_shop()

@@ -304,7 +304,7 @@ func save_game() -> void:
 		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
 		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume,
 		"player_name": player_name, "body_color": body_color,
-		"plots": plots, "home": home, "board": board, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
+		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
 	_write_save(JSON.stringify(data))
 
@@ -365,6 +365,11 @@ func load_game() -> bool:
 	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
 	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
 	plots = data.get("plots", {})
+	mail = []
+	for mm in data.get("mail", []):
+		if typeof(mm) == TYPE_DICTIONARY:
+			mail.append({"from": str(mm.get("from", "")), "text": str(mm.get("text", "")), "gift": str(mm.get("gift", "")),
+				"n": int(mm.get("n", 0)), "read": bool(mm.get("read", true)), "day": int(mm.get("day", 1))})
 	board = []
 	for m in data.get("board", []):
 		if typeof(m) == TYPE_DICTIONARY:
@@ -516,6 +521,7 @@ func reset_game() -> void:
 	stats = {}
 	board = []
 	tutorial_step = 0
+	mail = []
 	achievements = []
 	raining = false
 	weather_timer = 60.0
@@ -1003,6 +1009,7 @@ func _start_new_day() -> void:
 	help_today = 0
 	day += 1
 	_sync_week()
+	_daily_mail()
 	if season() != old_season:
 		season_changed.emit()
 		toast.emit(["春天来了，萝卜和草莓长得最快！", "夏天到了，玉米、向日葵和西瓜长得最快！", "秋天来了，南瓜和萝卜长得最快！", "冬天到了，下雪啦，作物长得慢一些~"][season()])
@@ -1220,3 +1227,71 @@ func buy_sprinkler() -> bool:
 	has_sprinkler = true
 	tools_changed.emit()
 	return true
+
+
+# ---------- 信箱 ----------
+
+const MAIL_LINES := {
+	"乐乐": ["最近农场种得怎么样？给你寄了点小东西~", "谢谢你一直帮我做任务！这是一点心意。"],
+	"店长豆豆": ["摩尔百货感谢你的光临！附上一点小礼物。", "下次来店里，记得看看今天的特价哦~"],
+	"小黄": ["我在广场上看到你啦！送你点东西~", "一起去钓鱼吧！先送你点好东西。"],
+	"嘟嘟": ["今天湖边的风好舒服，给你寄了点东西。", "钓鱼的诀窍是耐心哦！附赠小礼物~"],
+	"米米": ["我的草莓熟了，分你一点！", "农场的害虫被你抓走了好多，谢谢你！"],
+	"阿呆": ["城堡守卫阿呆来信！附上一点心意。", "嘿嘿，猜猜我给你寄了什么？"],
+}
+
+signal mail_changed
+
+var mail: Array = []  # [{"from", "text", "gift", "n", "read", "day"}]，最新的在最后
+
+
+func add_mail(from: String, text: String, gift: String = "", n: int = 0) -> void:
+	mail.append({"from": from, "text": text, "gift": gift, "n": n, "read": false, "day": day})
+	while mail.size() > 20:
+		mail.pop_front()
+	mail_changed.emit()
+	toast.emit("信箱里有一封来自%s的新信件！" % from)
+
+
+func unread_mail() -> int:
+	var n := 0
+	for m in mail:
+		if not m["read"]:
+			n += 1
+	return n
+
+
+## 打开信件：标记已读，收下附带的礼物。返回礼物描述（没有礼物返回空字符串）
+func open_mail(i: int) -> String:
+	if i < 0 or i >= mail.size():
+		return ""
+	var m: Dictionary = mail[i]
+	var got := ""
+	if not m["read"] and str(m["gift"]) != "" and int(m["n"]) > 0:
+		if m["gift"] == "beans":
+			add_beans(int(m["n"]))
+			got = "%d 摩尔豆" % int(m["n"])
+		else:
+			add_item(str(m["gift"]), int(m["n"]))
+			got = "%s ×%d" % [item_name(str(m["gift"])), int(m["n"])]
+	m["read"] = true
+	mail_changed.emit()
+	return got
+
+
+## 每天早上：一半概率收到某位 NPC 的信（好感越高礼物越好）；新的一周国王会来信
+func _daily_mail() -> void:
+	if (day - 1) % 7 == 0 and day > 1:
+		add_mail("摩尔国王", "新的一周开始了！本周挑战：%s。完成后来城堡找我领奖！" % weekly()["text"])
+	if randf() < 0.5:
+		var who: String = MAIL_LINES.keys().pick_random()
+		var a := affinity(who)
+		var gift := "lahm_fruit"
+		var n := 1
+		if a >= 50:
+			gift = ["beans", "furn_pot", "strawberry_cake"].pick_random()
+			n = 60 if gift == "beans" else 1
+		elif a >= 20:
+			gift = ["seed_" + CROPS.keys().filter(func(c): return is_unlocked(c)).pick_random(), "carrot_soup"].pick_random()
+			n = 3 if str(gift).begins_with("seed_") else 1
+		add_mail(who, MAIL_LINES[who].pick_random(), gift, n)
