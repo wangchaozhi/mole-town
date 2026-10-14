@@ -27,6 +27,8 @@ const SLEEP_SPOTS := {
 
 var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
+var cam: Camera2D
+var zoom_level := 1.0
 var rain_dim := 0.0
 var farm_sign
 var home_sign
@@ -81,7 +83,7 @@ func _ready() -> void:
 	player.position = Vector2(1200, 880)
 	ysort.add_child(player)
 	pond.player = player
-	var cam := Camera2D.new()
+	cam = Camera2D.new()
 	cam.limit_left = 0
 	cam.limit_top = 0
 	cam.limit_right = 2400
@@ -378,6 +380,8 @@ func _build_farm() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _handle_zoom(event):
+		return
 	var mb := event as InputEventMouseButton
 	if mb != null and mb.pressed and placing != "":
 		if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -555,3 +559,38 @@ func _on_item_gift(id: int, item: String, n: int) -> void:
 	ui.add_chat_line("", "【礼物】" + msg, Color(1, 0.8, 0.9))
 	if remotes.has(id):
 		remotes[id].play_emote("happy")
+
+
+# ---------- 镜头缩放：滚轮、+/- 键、触屏双指捏合 ----------
+
+const ZOOM_MIN := 0.7
+const ZOOM_MAX := 1.6
+
+
+func set_zoom(z: float) -> void:
+	zoom_level = clampf(z, ZOOM_MIN, ZOOM_MAX)
+	cam.zoom = Vector2(zoom_level, zoom_level)
+
+
+func _handle_zoom(event: InputEvent) -> bool:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and placing == "":
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+			set_zoom(zoom_level * 1.1)
+			return true
+		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			set_zoom(zoom_level / 1.1)
+			return true
+	var mg := event as InputEventMagnifyGesture
+	if mg != null:
+		set_zoom(zoom_level * mg.factor)
+		return true
+	var k := event as InputEventKey
+	if k != null and k.pressed and not (get_viewport().gui_get_focus_owner() is LineEdit):
+		if k.keycode == KEY_EQUAL or k.keycode == KEY_KP_ADD:
+			set_zoom(zoom_level * 1.15)
+			return true
+		if k.keycode == KEY_MINUS or k.keycode == KEY_KP_SUBTRACT:
+			set_zoom(zoom_level / 1.15)
+			return true
+	return false
