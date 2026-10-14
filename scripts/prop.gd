@@ -8,16 +8,51 @@ var text := ""
 var size := Vector2.ZERO
 var variant := 0
 var t := 0.0
+var was_night := false
+var light: PointLight2D = null
 
 
 func _ready() -> void:
 	variant = randi() % 3
-	set_process(kind == "fountain" or kind == "castle")
+	set_process(kind in ["fountain", "castle", "lamp", "house", "shop"])
+	if kind == "lamp":
+		light = _make_light(Vector2(0, -105), 1.6, Color(1, 0.85, 0.55))
+	elif kind == "house" or kind == "shop":
+		light = _make_light(Vector2(0, -70), 2.2, Color(1, 0.8, 0.5))
+
+
+## 夜晚的暖色光源（在昼夜 CanvasModulate 之上照亮周围）
+func _make_light(at: Vector2, scale_: float, col: Color) -> PointLight2D:
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1, 1))
+	g.set_color(1, Color(1, 1, 1, 0))
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(1.0, 0.5)
+	tex.width = 256
+	tex.height = 256
+	var l := PointLight2D.new()
+	l.texture = tex
+	l.texture_scale = scale_
+	l.color = col
+	l.energy = 0.9
+	l.position = at
+	l.enabled = false
+	add_child(l)
+	return l
 
 
 func _process(delta: float) -> void:
 	t += delta
-	queue_redraw()
+	if kind == "fountain" or kind == "castle":
+		queue_redraw()
+	elif GameState.is_night() != was_night:
+		was_night = GameState.is_night()
+		if light != null:
+			light.enabled = was_night
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -90,7 +125,11 @@ func _lamp() -> void:
 	draw_rect(Rect2(-7, -10, 14, 10), Color(0.25, 0.25, 0.3))
 	draw_rect(Rect2(-3, -100, 6, 92), Color(0.3, 0.3, 0.36))
 	draw_rect(Rect2(-10, -120, 20, 20), Color(0.25, 0.25, 0.3))
-	draw_rect(Rect2(-7, -117, 14, 15), Color(1, 0.93, 0.55))
+	draw_rect(Rect2(-7, -117, 14, 15), Color(1, 0.93, 0.55) if not was_night else Color(1, 1, 0.8))
+	if was_night:
+		D.ell(self, Vector2(0, 0), Vector2(70, 22), Color(1, 0.9, 0.5, 0.22))
+		draw_circle(Vector2(0, -109), 48.0, Color(1, 0.9, 0.5, 0.16))
+		draw_circle(Vector2(0, -109), 24.0, Color(1, 0.92, 0.6, 0.3))
 	draw_colored_polygon(PackedVector2Array([Vector2(-14, -120), Vector2(14, -120), Vector2(0, -132)]), Color(0.25, 0.25, 0.3))
 
 
@@ -138,7 +177,9 @@ func _building(wall: Color, roof: Color) -> void:
 	draw_circle(Vector2(0, -80), 24.0, door)
 	draw_circle(Vector2(14, -40), 3.5, Color(1, 0.85, 0.3))
 	for wx in [-95.0, 45.0]:
-		draw_rect(Rect2(wx, -100, 50, 42), Color(0.65, 0.85, 1.0))
+		draw_rect(Rect2(wx, -100, 50, 42), Color(1, 0.86, 0.45) if was_night else Color(0.65, 0.85, 1.0))
+		if was_night:
+			draw_rect(Rect2(wx - 8, -108, 66, 58), Color(1, 0.86, 0.45, 0.18))
 		draw_rect(Rect2(wx, -100, 50, 42), wall.darkened(0.4), false, 3.0)
 		draw_line(Vector2(wx + 25, -100), Vector2(wx + 25, -58), wall.darkened(0.4), 2.0)
 		draw_line(Vector2(wx, -79), Vector2(wx + 50, -79), wall.darkened(0.4), 2.0)

@@ -6,6 +6,7 @@ signal inventory_changed
 signal quest_changed
 signal hat_changed
 signal toast(text: String)
+signal weather_changed
 
 const BODY_COLORS := ["946644", "a8754f", "8a5a3c", "b38a5e", "9c6b5a", "7d5a44"]
 const DAY_MINUTES := 1440.0
@@ -53,6 +54,8 @@ var save_path := "user://mole_save.json"
 var player_name := ""
 var body_color := ""
 var help_today: int = 0  # 今天串门帮忙已领奖励的次数
+var raining := false
+var weather_timer := 60.0
 
 
 func _ready() -> void:
@@ -83,6 +86,7 @@ func _process(delta: float) -> void:
 		day += 1
 		toast.emit("新的一天开始了！第 %d 天" % day)
 	lahm_hunger = maxf(0.0, lahm_hunger - delta * 0.25)
+	_update_weather(delta)
 
 
 func _notification(what: int) -> void:
@@ -299,3 +303,35 @@ func _setup_theme() -> void:
 	th.set_stylebox("fill", "ProgressBar", fill)
 	ui_theme = th
 	get_tree().root.theme = th
+
+
+# ---------- 天气 / 昼夜 ----------
+
+func is_night() -> bool:
+	var h := minutes / 60.0
+	return h < 5.5 or h >= 19.0
+
+
+func _update_weather(delta: float) -> void:
+	weather_timer -= delta
+	if weather_timer > 0.0 or not Net.controls_weather():
+		return
+	if raining:
+		set_raining(false)
+		weather_timer = randf_range(90.0, 180.0)
+	elif randf() < 0.45:
+		set_raining(true)
+		weather_timer = randf_range(30.0, 60.0)
+	else:
+		weather_timer = 60.0
+
+
+## 联机时由房主决定天气，客户端收到同步后 broadcast = false
+func set_raining(r: bool, broadcast: bool = true) -> void:
+	if r == raining:
+		return
+	raining = r
+	weather_changed.emit()
+	toast.emit("下雨啦！雨水会自动浇灌农田" if r else "雨停了，天晴啦~")
+	if broadcast:
+		Net.send_weather(r)

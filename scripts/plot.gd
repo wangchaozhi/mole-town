@@ -67,6 +67,8 @@ func _advance(sec: float) -> void:
 
 func _process(delta: float) -> void:
 	t += delta
+	if crop != "" and growth < 1.0 and GameState.raining:
+		water_time = maxf(water_time, 3.0)  # 下雨自动浇水
 	if crop != "" and growth < 1.0 and not bug:
 		_advance(delta)
 		if randf() < delta * 0.004:

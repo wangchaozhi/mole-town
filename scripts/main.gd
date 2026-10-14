@@ -10,12 +10,14 @@ const NPC = preload("res://scripts/npc.gd")
 const Lahm = preload("res://scripts/lahm.gd")
 const UI = preload("res://scripts/ui.gd")
 const RemoteMole = preload("res://scripts/remote_mole.gd")
+const Rain = preload("res://scripts/rain.gd")
 
 const FARM_RECT := Rect2(1570, 850, 560, 360)
 const HELP_REWARDS_PER_DAY := 20
 
 var remotes := {}  # peer_id -> 远程玩家节点
 var plots := []
+var rain_dim := 0.0
 var farm_sign
 var ysort: Node2D
 var player
@@ -93,6 +95,7 @@ func _ready() -> void:
 
 	sky = CanvasModulate.new()
 	add_child(sky)
+	add_child(Rain.new())
 	ui = UI.new()
 	ui.player = player
 	add_child(ui)
@@ -337,8 +340,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		player.go_to(p)
 
 
-func _process(_delta: float) -> void:
-	sky.color = _sky_color(GameState.minutes / 60.0)
+func _process(delta: float) -> void:
+	rain_dim = move_toward(rain_dim, 1.0 if GameState.raining else 0.0, delta * 0.5)
+	sky.color = _sky_color(GameState.minutes / 60.0) * Color(1, 1, 1).lerp(Color(0.72, 0.76, 0.86), rain_dim)
 	_update_remote_visibility()
 
 

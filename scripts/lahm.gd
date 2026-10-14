@@ -23,6 +23,7 @@ func _ready() -> void:
 	name_label.add_theme_color_override("font_color", Color(1, 0.85, 0.9))
 	name_label.add_theme_color_override("font_outline_color", Color(0.4, 0.1, 0.2))
 	name_label.add_theme_constant_override("outline_size", 4)
+	name_label.z_index = 5
 	add_child(name_label)
 
 

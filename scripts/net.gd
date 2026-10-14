@@ -138,7 +138,9 @@ func _broadcast_roster() -> void:
 func register(info) -> void:
 	if not multiplayer.is_server():
 		return
-	players[multiplayer.get_remote_sender_id()] = _clean(info)
+	var id := multiplayer.get_remote_sender_id()
+	players[id] = _clean(info)
+	weather.rpc_id(id, GameState.raining)
 	_broadcast_roster()
 
 
@@ -276,3 +278,19 @@ func farm_action_reply(msg: String, item: String, beans: int) -> void:
 	if not GameState.CROPS.has(item):
 		item = ""
 	farm_action_result.emit(str(msg).left(40), item, clampi(beans, 0, 5))
+
+
+# ---------- 天气 ----------
+
+func controls_weather() -> bool:
+	return not is_online() or multiplayer.is_server()
+
+
+func send_weather(r: bool) -> void:
+	if is_online() and multiplayer.is_server():
+		weather.rpc(r)
+
+
+@rpc("authority", "call_remote", "reliable")
+func weather(r: bool) -> void:
+	GameState.set_raining(r, false)

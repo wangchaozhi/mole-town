@@ -33,6 +33,7 @@ func _ready() -> void:
 	name_label.add_theme_color_override("font_color", Color.WHITE)
 	name_label.add_theme_color_override("font_outline_color", Color(0.25, 0.15, 0.05))
 	name_label.add_theme_constant_override("outline_size", 5)
+	name_label.z_index = 5
 	add_child(name_label)
 
 	bubble = Label.new()

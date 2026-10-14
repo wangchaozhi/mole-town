@@ -63,6 +63,7 @@ var fish_speed := 1.5
 
 func _ready() -> void:
 	add_to_group("ui")
+	layer = 5
 	root = Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
