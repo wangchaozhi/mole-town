@@ -203,6 +203,10 @@ func _run() -> void:
 	plot.bug = false
 	plot.interact(p)
 	check(GameState.count("carrot") >= c0 + 2, "丰收节收获至少 2 个")
+	GameState.day = 8
+	check(GameState.season_name() == "夏" and GameState.season_growth("corn") > 1.0, "夏天玉米当季长得快")
+	GameState.day = 22
+	check(GameState.season_name() == "冬" and GameState.season_growth("strawberry") < 1.0, "冬天不当季作物长得慢")
 	GameState.day = day0
 
 	print("[存档]")

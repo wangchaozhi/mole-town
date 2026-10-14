@@ -59,7 +59,7 @@ func clear_remote() -> void:
 func _advance(sec: float) -> void:
 	if crop == "" or growth >= 1.0:
 		return
-	var gt: float = GameState.CROPS[crop]["grow_time"]
+	var gt: float = GameState.CROPS[crop]["grow_time"] / GameState.season_growth(crop)
 	var wet := minf(sec, water_time)
 	growth = minf(1.0, growth + (wet * 2.0 + (sec - wet)) / gt)
 	water_time = maxf(0.0, water_time - sec)

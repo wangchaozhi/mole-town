@@ -895,6 +895,8 @@ func _populate_shop() -> void:
 				var c: Dictionary = GameState.CROPS[id]
 				var price := GameState.seed_price(id)
 				var tag := "  【今日特价 6 折】" if GameState.market()["sale"] == id else ""
+				if GameState.in_season(id):
+					tag += "  【当季，长得快】"
 				var info := "%s种子   %d豆%s\n约%d秒成熟 · 今日收购价%d豆" % [c["name"], price, tag, int(c["grow_time"]), GameState.sell_price(id)]
 				if GameState.is_unlocked(id):
 					_shop_row(info, [["买1个", _buy.bind("seed_" + id, price, 1)], ["买5个", _buy.bind("seed_" + id, price, 5)]])

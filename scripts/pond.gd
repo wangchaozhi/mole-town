@@ -45,8 +45,12 @@ func interact(_pl) -> void:
 func _draw() -> void:
 	D.ell(self, Vector2.ZERO, radius + Vector2(26, 18), Color(0.93, 0.85, 0.6), 48)
 	D.ell(self, Vector2.ZERO, radius + Vector2(8, 5), Color(0.45, 0.72, 0.9), 48)
-	D.ell(self, Vector2.ZERO, radius, Color(0.3, 0.6, 0.9), 48)
-	D.ell(self, Vector2(10, 8), radius * 0.62, Color(0.24, 0.5, 0.84), 40)
+	var winter := GameState.season() == 3
+	D.ell(self, Vector2.ZERO, radius, Color(0.62, 0.8, 0.95) if winter else Color(0.3, 0.6, 0.9), 48)
+	D.ell(self, Vector2(10, 8), radius * 0.62, Color(0.5, 0.72, 0.92) if winter else Color(0.24, 0.5, 0.84), 40)
+	if winter:
+		for cr in [[Vector2(-120, -20), Vector2(-60, 10), Vector2(-20, -5)], [Vector2(40, 30), Vector2(90, 0), Vector2(150, 20)], [Vector2(-40, 60), Vector2(10, 80)]]:
+			draw_polyline(PackedVector2Array(cr), Color(1, 1, 1, 0.7), 1.5)
 	for i in 4:
 		var ph := fmod(t * 0.35 + i / 4.0, 1.0)
 		var centers := [Vector2(-90, -30), Vector2(80, 20), Vector2(-20, 50), Vector2(120, -50)]
@@ -56,6 +60,8 @@ func _draw() -> void:
 		var o := sin(t * 1.5 + s.x) * 6.0
 		draw_line(s + Vector2(o, 0), s + Vector2(o + 30, 0), Color(1, 1, 1, 0.55), 2.0)
 	for lp in [Vector2(-170, 40), Vector2(160, -30), Vector2(-60, -95)]:
+		if winter:
+			break  # 冬天湖面结霜，看不到荷叶
 		var lc: Vector2 = lp + Vector2(0, sin(t + lp.x) * 1.5)
 		D.ell(self, lc, Vector2(20, 11), Color(0.3, 0.65, 0.3))
 		draw_colored_polygon(PackedVector2Array([lc, lc + Vector2(20, -3), lc + Vector2(20, 4)]), Color(0.24, 0.5, 0.84))

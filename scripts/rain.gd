@@ -30,10 +30,14 @@ func _process(delta: float) -> void:
 		return
 	canvas.visible = true
 	var vs := get_viewport().get_visible_rect().size
+	var snow := GameState.season() == 3
 	for d in drops:
-		d[0] += Vector2(-0.25, 1.0) * d[1] * delta
+		if snow:
+			d[0] += Vector2(sin(d[0].y * 0.02 + d[2]) * 30.0, d[1] * 0.12) * delta
+		else:
+			d[0] += Vector2(-0.25, 1.0) * d[1] * delta
 		if d[0].y > vs.y or d[0].x < -100:
-			if randf() < 0.3:
+			if not snow and randf() < 0.3:
 				splashes.append([Vector2(d[0].x, randf_range(vs.y * 0.3, vs.y)), 0.35])
 			var nd := _new_drop(false)
 			d[0] = nd[0]
@@ -50,6 +54,9 @@ func _draw_rain() -> void:
 	for i in n:
 		var d: Array = drops[i]
 		var p: Vector2 = d[0]
+		if GameState.season() == 3:
+			canvas.draw_circle(p, 1.5 + float(d[2]) * 0.08, Color(1, 1, 1, 0.85 * amount))
+			continue
 		canvas.draw_line(p, p + Vector2(-0.25, 1.0) * float(d[2]), Color(0.8, 0.88, 1.0, 0.55 * amount), 1.5)
 	for s in splashes:
 		var k: float = s[1] / 0.35

@@ -27,25 +27,48 @@ func _ready() -> void:
 		flowers.append([Vector2(rng.randf() * W, rng.randf() * H), cols[rng.randi() % cols.size()]])
 
 
+## 各季节的草地颜色：春、夏、秋、冬
+const GRASS := [Color(0.5, 0.78, 0.36), Color(0.42, 0.72, 0.3), Color(0.74, 0.68, 0.34), Color(0.9, 0.93, 0.97)]
+
+
+func _process(_delta: float) -> void:
+	# 季节变化时重画地面
+	if GameState.season() != drawn_season:
+		queue_redraw()
+
+
+var drawn_season := -1
+
+
 func _draw() -> void:
-	var grass := Color(0.47, 0.75, 0.35)
+	var s := GameState.season()
+	drawn_season = s
+	var grass: Color = GRASS[s]
 	draw_rect(Rect2(-400, -400, W + 800, H + 800), grass)
-	var dark := grass.darkened(0.15)
+	var dark := grass.darkened(0.15) if s != 3 else Color(0.78, 0.84, 0.9)
 	for p in tufts:
 		draw_line(p, p + Vector2(-3, -7), dark, 2.0)
 		draw_line(p + Vector2(4, 0), p + Vector2(6, -8), dark, 2.0)
-	for f in flowers:
-		draw_circle(f[0], 3.0, f[1])
-		draw_circle(f[0], 1.2, Color(1, 0.9, 0.3))
+	# 花：春天最多，夏天一些，秋天是落叶，冬天没有
+	var count: int = [flowers.size(), flowers.size() / 2, flowers.size() / 2, 0][s]
+	for i in count:
+		var f: Array = flowers[i]
+		if s == 2:
+			var leaf := Color(0.85, 0.45, 0.15) if i % 2 == 0 else Color(0.8, 0.25, 0.15)
+			draw_colored_polygon(PackedVector2Array([f[0] + Vector2(-4, 0), f[0] + Vector2(0, -3), f[0] + Vector2(4, 0), f[0] + Vector2(0, 3)]), leaf)
+		else:
+			draw_circle(f[0], 3.0, f[1])
+			draw_circle(f[0], 1.2, Color(1, 0.9, 0.3))
 
 	# 小院：浅色草坪 + 石板小路
 	var yard := Rect2(1110, 1060, 360, 260)
-	draw_rect(yard.grow(6), Color(0.38, 0.62, 0.3))
-	draw_rect(yard, Color(0.56, 0.82, 0.42))
+	var lawn := Color(0.56, 0.82, 0.42) if s != 3 else Color(0.95, 0.97, 1.0)
+	draw_rect(yard.grow(6), lawn.darkened(0.25))
+	draw_rect(yard, lawn)
 	for yy in range(0, 260, 40):
 		for xx in range(0, 360, 40):
 			if (xx + yy) / 40 % 2 == 0:
-				draw_rect(Rect2(1110 + xx, 1060 + yy, 40, 40), Color(0.6, 0.85, 0.46))
+				draw_rect(Rect2(1110 + xx, 1060 + yy, 40, 40), lawn.lightened(0.08) if s != 3 else Color(0.9, 0.93, 0.97))
 	for i in 6:
 		D_ell(Vector2(1290, 1080 + i * 44), Vector2(16, 9), Color(0.82, 0.8, 0.75))
 	draw_rect(Rect2(1590, 870, 520, 325), Color(0.6, 0.46, 0.3))

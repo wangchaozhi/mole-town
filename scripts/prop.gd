@@ -14,6 +14,8 @@ var light: PointLight2D = null
 
 func _ready() -> void:
 	variant = randi() % 3
+	if kind in ["tree", "pine", "bush"]:
+		GameState.season_changed.connect(queue_redraw)
 	set_process(kind in ["fountain", "castle", "lamp", "house", "shop"])
 	if kind == "lamp":
 		light = _make_light(Vector2(0, -105), 1.6, Color(1, 0.85, 0.55))
@@ -71,18 +73,37 @@ func _draw() -> void:
 		"castle": _castle()
 
 
+## 树叶颜色随季节变化：春嫩绿、夏深绿、秋橙红、冬灰绿（上面积雪）
+func _leaf_color() -> Color:
+	match GameState.season():
+		0:
+			return [Color(0.38, 0.72, 0.32), Color(0.45, 0.76, 0.35), Color(0.34, 0.68, 0.36)][variant]
+		2:
+			return [Color(0.9, 0.55, 0.18), Color(0.85, 0.32, 0.18), Color(0.92, 0.75, 0.25)][variant]
+		3:
+			return [Color(0.4, 0.5, 0.42), Color(0.45, 0.52, 0.44), Color(0.38, 0.48, 0.42)][variant]
+	return [Color(0.25, 0.6, 0.25), Color(0.32, 0.66, 0.28), Color(0.22, 0.55, 0.32)][variant]
+
+
 func _tree() -> void:
+	var s := GameState.season()
 	D.ell(self, Vector2.ZERO, Vector2(40, 12), Color(0, 0, 0, 0.2))
 	draw_rect(Rect2(-8, -50, 16, 50), Color(0.5, 0.33, 0.2))
-	var greens := [Color(0.25, 0.6, 0.25), Color(0.32, 0.66, 0.28), Color(0.22, 0.55, 0.32)]
-	var g: Color = greens[variant]
+	var g := _leaf_color()
 	draw_circle(Vector2(-24, -62), 28.0, g.darkened(0.15))
 	draw_circle(Vector2(24, -62), 28.0, g.darkened(0.15))
 	draw_circle(Vector2(0, -88), 36.0, g)
 	draw_circle(Vector2(-12, -100), 13.0, g.lightened(0.18))
-	if variant == 2:
+	if s == 0:
+		for p in [Vector2(-20, -70), Vector2(15, -92), Vector2(26, -60), Vector2(-4, -76), Vector2(-26, -50), Vector2(8, -108)]:
+			draw_circle(p, 4.0, Color(1, 0.75, 0.82))
+	elif s == 1 and variant == 2:
 		for p in [Vector2(-20, -70), Vector2(15, -92), Vector2(26, -60), Vector2(-4, -76)]:
 			draw_circle(p, 5.0, Color(0.95, 0.25, 0.2))
+	elif s == 3:
+		D.ell(self, Vector2(0, -114), Vector2(26, 10), Color(0.97, 0.98, 1.0))
+		D.ell(self, Vector2(-26, -84), Vector2(18, 7), Color(0.97, 0.98, 1.0))
+		D.ell(self, Vector2(26, -84), Vector2(18, 7), Color(0.97, 0.98, 1.0))
 
 
 func _pine() -> void:
@@ -93,15 +114,24 @@ func _pine() -> void:
 		var y := -25.0 - i * 32.0
 		var w := 42.0 - i * 9.0
 		draw_colored_polygon(PackedVector2Array([Vector2(-w, y), Vector2(w, y), Vector2(0, y - 55)]), g.lightened(i * 0.08))
+		if GameState.season() == 3:
+			draw_colored_polygon(PackedVector2Array([Vector2(-w * 0.35, y - 35), Vector2(w * 0.35, y - 35), Vector2(0, y - 55)]), Color(0.97, 0.98, 1.0))
 
 
 func _bush() -> void:
+	var s := GameState.season()
 	D.ell(self, Vector2.ZERO, Vector2(32, 8), Color(0, 0, 0, 0.18))
 	var g := Color(0.3, 0.62, 0.3)
+	if s == 2:
+		g = Color(0.78, 0.45, 0.2)
+	elif s == 3:
+		g = Color(0.42, 0.5, 0.42)
 	draw_circle(Vector2(-15, -14), 16.0, g.darkened(0.1))
 	draw_circle(Vector2(15, -14), 16.0, g.darkened(0.1))
 	draw_circle(Vector2(0, -24), 18.0, g)
-	if variant > 0:
+	if s == 3:
+		D.ell(self, Vector2(0, -38), Vector2(14, 6), Color(0.97, 0.98, 1.0))
+	elif variant > 0 and s != 2:
 		for p in [Vector2(-12, -20), Vector2(8, -30), Vector2(16, -12)]:
 			draw_circle(p, 3.5, Color(1, 0.4, 0.6) if variant == 1 else Color(1, 1, 1))
 

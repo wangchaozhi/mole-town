@@ -15,12 +15,12 @@ const DAY_MINUTES := 1440.0
 const REAL_SECONDS_PER_DAY := 300.0  # 现实 5 分钟 = 游戏 1 天
 
 const CROPS := {
-	"carrot": {"name": "萝卜", "seed_price": 5, "sell": 12, "grow_time": 25.0, "level": 1, "exp": 2, "color": Color(1.0, 0.55, 0.15)},
-	"strawberry": {"name": "草莓", "seed_price": 12, "sell": 30, "grow_time": 45.0, "level": 1, "exp": 3, "color": Color(0.95, 0.2, 0.3)},
-	"corn": {"name": "玉米", "seed_price": 18, "sell": 45, "grow_time": 60.0, "level": 2, "exp": 4, "color": Color(1.0, 0.85, 0.3)},
-	"pumpkin": {"name": "南瓜", "seed_price": 25, "sell": 70, "grow_time": 80.0, "level": 3, "exp": 6, "color": Color(1.0, 0.6, 0.1)},
-	"sunflower": {"name": "向日葵", "seed_price": 40, "sell": 120, "grow_time": 120.0, "level": 5, "exp": 9, "color": Color(1.0, 0.85, 0.1)},
-	"watermelon": {"name": "西瓜", "seed_price": 60, "sell": 180, "grow_time": 150.0, "level": 7, "exp": 14, "color": Color(0.3, 0.68, 0.3)},
+	"carrot": {"name": "萝卜", "seed_price": 5, "sell": 12, "grow_time": 25.0, "level": 1, "exp": 2, "seasons": [0, 2], "color": Color(1.0, 0.55, 0.15)},
+	"strawberry": {"name": "草莓", "seed_price": 12, "sell": 30, "grow_time": 45.0, "level": 1, "exp": 3, "seasons": [0], "color": Color(0.95, 0.2, 0.3)},
+	"corn": {"name": "玉米", "seed_price": 18, "sell": 45, "grow_time": 60.0, "level": 2, "exp": 4, "seasons": [1], "color": Color(1.0, 0.85, 0.3)},
+	"pumpkin": {"name": "南瓜", "seed_price": 25, "sell": 70, "grow_time": 80.0, "level": 3, "exp": 6, "seasons": [2], "color": Color(1.0, 0.6, 0.1)},
+	"sunflower": {"name": "向日葵", "seed_price": 40, "sell": 120, "grow_time": 120.0, "level": 5, "exp": 9, "seasons": [1], "color": Color(1.0, 0.85, 0.1)},
+	"watermelon": {"name": "西瓜", "seed_price": 60, "sell": 180, "grow_time": 150.0, "level": 7, "exp": 14, "seasons": [1], "color": Color(0.3, 0.68, 0.3)},
 }
 
 const FISH := {
@@ -120,8 +120,12 @@ func _process(delta: float) -> void:
 	minutes += delta * DAY_MINUTES / REAL_SECONDS_PER_DAY
 	if minutes >= DAY_MINUTES:
 		minutes -= DAY_MINUTES
+		var old_season := season()
 		help_today = 0
 		day += 1
+		if season() != old_season:
+			season_changed.emit()
+			toast.emit(["春天来了，萝卜和草莓长得最快！", "夏天到了，玉米、向日葵和西瓜长得最快！", "秋天来了，南瓜和萝卜长得最快！", "冬天到了，下雪啦，作物长得慢一些~"][season()])
 		var m := market()
 		toast.emit("新的一天开始了！第 %d 天 · 今日热门收购：%s · 特价种子：%s" % [day, item_name(m["hot"]), item_name(m["sale"])])
 		if festival() != "":
@@ -136,7 +140,7 @@ func _notification(what: int) -> void:
 
 
 func time_text() -> String:
-	return "第%d天  %02d:%02d" % [day, int(minutes) / 60, int(minutes) % 60]
+	return "%s · 第%d天  %02d:%02d" % [season_name(), day, int(minutes) / 60, int(minutes) % 60]
 
 
 # ---------- 物品 ----------
@@ -427,7 +431,10 @@ func set_raining(r: bool, broadcast: bool = true) -> void:
 		return
 	raining = r
 	weather_changed.emit()
-	toast.emit("下雨啦！雨水会自动浇灌农田" if r else "雨停了，天晴啦~")
+	if season() == 3:
+		toast.emit("下雪啦！雪水会自动浇灌农田" if r else "雪停了~")
+	else:
+		toast.emit("下雨啦！雨水会自动浇灌农田" if r else "雨停了，天晴啦~")
 	if broadcast:
 		Net.send_weather(r)
 
@@ -861,3 +868,35 @@ func contest_catch() -> void:
 			toast.emit("钓鱼大赛：钓到 %d 条，获得冠军奖品 %s！" % [contest_count, item_name(str(prize[0]))])
 		add_exp(20)
 		Sfx.play("catch")
+
+
+# ---------- 季节 ----------
+# 每个季节 7 个游戏日：第 1~7 天春，8~14 夏，15~21 秋，22~28 冬，然后循环
+
+const SEASON_NAMES := ["春", "夏", "秋", "冬"]
+const DAYS_PER_SEASON := 7
+
+signal season_changed
+
+
+func season(d: int = -1) -> int:
+	if d < 0:
+		d = day
+	return ((d - 1) / DAYS_PER_SEASON) % 4
+
+
+func season_name() -> String:
+	return SEASON_NAMES[season()]
+
+
+func in_season(crop: String) -> bool:
+	return season() in CROPS[crop].get("seasons", [])
+
+
+## 作物在当前季节的生长速度倍率：当季 ×1.3，冬天不当季 ×0.7
+func season_growth(crop: String) -> float:
+	if in_season(crop):
+		return 1.3
+	if season() == 3:
+		return 0.7
+	return 1.0
