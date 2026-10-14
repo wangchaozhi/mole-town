@@ -420,6 +420,11 @@ func _run() -> void:
 	check(ui.act.gift_panel.visible, "打开给 NPC 送礼的面板")
 	ui.act._give("corn", 1)
 	check(GameState.affinity("小黄") == 15 and not ui.act.gift_panel.visible, "通过界面送小黄喜欢的玉米")
+	var cm := GameState.roll_fish_size("big_fish")
+	check(cm >= 30 and cm <= 62 and GameState.roll_fish_size("boot") == 0, "鱼的尺寸在范围内，破靴子没有尺寸")
+	GameState.fish_records.erase("big_fish")
+	check(not GameState.record_fish_size("big_fish", 40) and GameState.record_fish_size("big_fish", 45) \
+		and not GameState.record_fish_size("big_fish", 41) and GameState.fish_records["big_fish"] == 45, "鱼的尺寸纪录")
 	var bday_day0 := GameState.day
 	GameState.day = 17 + 28  # 第二年嘟嘟的生日
 	check(GameState.birthday_npc() == "嘟嘟" and GameState.festival_text().contains("嘟嘟的生日"), "NPC 生日按 28 天一年循环")

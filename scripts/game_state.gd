@@ -24,15 +24,15 @@ const CROPS := {
 }
 
 const FISH := {
-	"small_fish": {"name": "小鱼", "sell": 8, "weight": 50, "color": Color(0.55, 0.72, 0.88)},
-	"big_fish": {"name": "大鱼", "sell": 22, "weight": 28, "color": Color(0.3, 0.5, 0.82)},
-	"gold_fish": {"name": "金鱼", "sell": 60, "weight": 8, "color": Color(1.0, 0.75, 0.15)},
+	"small_fish": {"name": "小鱼", "sell": 8, "weight": 50, "color": Color(0.55, 0.72, 0.88), "size": [8, 20]},
+	"big_fish": {"name": "大鱼", "sell": 22, "weight": 28, "color": Color(0.3, 0.5, 0.82), "size": [30, 62]},
+	"gold_fish": {"name": "金鱼", "sell": 60, "weight": 8, "color": Color(1.0, 0.75, 0.15), "size": [14, 30]},
 	"boot": {"name": "破靴子", "sell": 1, "weight": 14, "color": Color(0.5, 0.35, 0.25)},
 	# 季节限定的鱼：只在对应季节能钓到
-	"sakura_fish": {"name": "樱花鱼", "sell": 32, "weight": 14, "season": 0, "color": Color(1.0, 0.65, 0.78)},
-	"tropical_fish": {"name": "热带鱼", "sell": 36, "weight": 14, "season": 1, "color": Color(0.2, 0.8, 0.75)},
-	"maple_carp": {"name": "枫叶鲤", "sell": 40, "weight": 14, "season": 2, "color": Color(0.9, 0.4, 0.15)},
-	"ice_fish": {"name": "冰鱼", "sell": 45, "weight": 14, "season": 3, "color": Color(0.75, 0.9, 1.0)},
+	"sakura_fish": {"name": "樱花鱼", "sell": 32, "weight": 14, "season": 0, "color": Color(1.0, 0.65, 0.78), "size": [18, 34]},
+	"tropical_fish": {"name": "热带鱼", "sell": 36, "weight": 14, "season": 1, "color": Color(0.2, 0.8, 0.75), "size": [12, 26]},
+	"maple_carp": {"name": "枫叶鲤", "sell": 40, "weight": 14, "season": 2, "color": Color(0.9, 0.4, 0.15), "size": [30, 56]},
+	"ice_fish": {"name": "冰鱼", "sell": 45, "weight": 14, "season": 3, "color": Color(0.75, 0.9, 1.0), "size": [18, 34]},
 }
 
 const HATS := {
@@ -99,6 +99,7 @@ var catch_day: int = -1
 var catch_plays: int = 0  # 今天已领奖的小游戏次数
 var input_locked := false  # 小游戏进行中时禁止角色移动
 var collection: Dictionary = {}  # 物品 id -> 累计获得数量（图鉴）
+var fish_records: Dictionary = {}  # 鱼 id -> 钓到过的最大尺寸（厘米）
 var stats: Dictionary = {}  # harvest_total / fish_total / help_total / visits
 var achievements: Array = []  # 已解锁的成就 id
 var last_signin := ""  # 上次签到的日期（现实日期）
@@ -314,7 +315,7 @@ func save_game() -> void:
 	var data := {
 		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
 		"hat": hat, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
+		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
 		"player_name": player_name, "body_color": body_color,
 		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
 	}
@@ -370,6 +371,11 @@ func load_game() -> bool:
 	var col: Dictionary = data.get("collection", {})
 	for k in col:
 		collection[k] = int(col[k])
+	fish_records = {}
+	var fr: Dictionary = data.get("fish_records", {})
+	for k in fr:
+		if FISH.has(k):
+			fish_records[k] = int(fr[k])
 	stats = {}
 	var st: Dictionary = data.get("stats", {})
 	for k in st:
@@ -542,6 +548,7 @@ func reset_game() -> void:
 	home = []
 	offline_seconds = 0.0
 	collection = {}
+	fish_records = {}
 	npc_affinity = {}
 	npc_gift_day = {}
 	stats = {}
@@ -593,6 +600,25 @@ signal achievement_unlocked(a: Dictionary)
 
 
 ## 记录图鉴 / 统计：kind = harvest / fish / help / visit
+## 随机一条鱼的尺寸（厘米），小的多、大的少；破靴子没有尺寸返回 0
+func roll_fish_size(id: String) -> int:
+	if not FISH.has(id) or not FISH[id].has("size"):
+		return 0
+	var rg: Array = FISH[id]["size"]
+	return int(rg[0]) + roundi((int(rg[1]) - int(rg[0])) * pow(randf(), 1.6))
+
+
+## 记录尺寸，打破纪录返回 true（第一次钓到不算破纪录）
+func record_fish_size(id: String, cm: int) -> bool:
+	if cm <= 0:
+		return false
+	var old := int(fish_records.get(id, 0))
+	if cm > old:
+		fish_records[id] = cm
+		return old > 0
+	return false
+
+
 func record(kind: String, item: String = "", n: int = 1) -> void:
 	match kind:
 		"harvest":

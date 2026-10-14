@@ -964,7 +964,9 @@ func _reel() -> void:
 			else:
 				GameState.report("fish", id)
 				Sfx.play("catch")
-				_fish_end("钓到了一条%s！" % GameState.item_name(id))
+				var cm := GameState.roll_fish_size(id)
+				var rec := GameState.record_fish_size(id, cm)
+				_fish_end("钓到了一条%s（%d 厘米）！%s" % [GameState.item_name(id), cm, "新纪录！" if rec else ""])
 		else:
 			Sfx.play("fail")
 			_fish_end("没拉住，鱼跑掉了！")
