@@ -111,6 +111,14 @@ godot --headless --path . res://tests/smoke_test.tscn -- --profile=smoke
 godot --headless --path . res://tests/soak_test.tscn -- --profile=soak
 ```
 
+提交前跑一遍完整检查（静态检查：字符串里的真换行、测试里重复的变量名、失效的脚本路径；然后导入资源、跑冒烟测试，加 `--soak` 再跑浸泡测试）：
+
+```bash
+GODOT=/path/to/godot tools/check.sh --soak
+```
+
+每次推送到 GitHub，`.github/workflows/ci.yml` 会在 Linux 上用同一个脚本自动跑一遍。
+
 ## 打包分享（导出 Windows 版）
 
 项目里已经带了 Windows 导出预设，导出后的 exe 不需要安装 Godot，可以直接发给小伙伴一起联机。

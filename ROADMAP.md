@@ -75,6 +75,11 @@
 - [x] 状态栏的「今日」提示：商人在不在、春天四叶草还没找到、夏夜萤火虫、还剩几堆落叶 / 雪，方便发现季节玩法
 - [x] 修正（玩家反馈）：「欢迎来到摩尔小镇」帮助面板太长，底部的「开始玩吧」按钮被挤出屏幕；说明改成可滚动区域，高度随窗口和界面缩放自适应，并补上新玩法说明
 
+- [x] 重构 1/4：20 多张数据表从 game_state.gd 拆到 scripts/data/（items / progress / story），GameState 里保留同名常量，其他代码不用改
+- [x] 重构 2/4：45 个脚本按功能分目录：autoload / data / world / entities / events / ui / util
+- [x] 重构 3/4：ui.gd 从 1402 行拆到约 800 行，新增 ui_fishing（钓鱼）、ui_net（联机面板 / 玩家菜单 / 串门）、ui_npc（NPC 对话 / 扭蛋 / 国王挑战）、ui_chat（聊天）
+- [x] 重构 4/4：tools/check.sh（静态检查 + 冒烟测试 + 浸泡测试）、GitHub Actions 自动跑检查、.editorconfig
+
 ## 待办（大致按优先级）
 
 - [ ] （暂缓）拆分 game_state.gd：GDScript 没有 partial class，按继承链拆会打断各部分之间的互相调用，改成子节点又要改 20 个文件里的所有 GameState.xxx 调用，风险大于收益；目前已按功能分段
