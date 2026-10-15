@@ -46,6 +46,7 @@ var shop  # ui_shop.gd：摩尔百货
 var bag_panel: PanelContainer
 var bag_list: GridContainer
 var help_panel: PanelContainer
+var help_scroll: ScrollContainer
 var fish_panel: PanelContainer
 var fish_label: Label
 var fish_bar: Control
@@ -568,6 +569,10 @@ func _build_help() -> void:
 	v.add_theme_constant_override("separation", 10)
 	help_panel.add_child(v)
 	v.add_child(_label("欢迎来到摩尔小镇！", 26))
+	# 说明越来越长：放进滚动区域，高度跟着窗口和界面缩放走，保证底下的按钮一直看得到
+	help_scroll = ScrollContainer.new()
+	help_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(help_scroll)
 	var l := _label("", 16)
 	l.custom_minimum_size = Vector2(600, 0)
 	l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
@@ -588,8 +593,12 @@ func _build_help() -> void:
 		+ "• 串门：点击其他玩家选「去TA家农场串门」，帮好友浇水、抓虫能拿摩尔豆，成熟的作物还能摘一个；点顶部「回家」返回\n" \
 		+ "• 右上角小地图：点击任意位置直接传送过去；鼠标滚轮 / +- 键 / 双指捏合可以缩放镜头\n" \
 		+ "• 快捷键：回车 聊天，E 表情，F 互动，C 图鉴，M 小地图，B 背包，N 联机，H 帮助，F12 截图，Esc 关闭窗口\n" \
+		+ "• 四季小玩法：春天草丛里找四叶草（找到当天是幸运日），夏夜湖边抓萤火虫，秋天翻落叶堆，冬天翻雪堆；左上角会提示今天有什么\n" \
+		+ "• 广场东边的扭蛋机：50 豆扭一次，有限定帽子；每周末白天湖边有旅行商人阿布摆摊\n" \
+		+ "• 拉姆 Lv2 起，每天第一次在它吃饱时摸摸它，会和你玩捉迷藏\n" \
 		+ "• 游戏每 30 秒自动保存，离线时农场里的作物也会继续生长"
-	v.add_child(l)
+	help_scroll.add_child(l)
+	help_panel.visibility_changed.connect(_fit_help)
 	var hb := HBoxContainer.new()
 	hb.alignment = BoxContainer.ALIGNMENT_CENTER
 	hb.add_child(_button("开始玩吧！", func():
@@ -1261,11 +1270,19 @@ func open_mail() -> void:
 # ---------- 界面大小 ----------
 
 ## 整个界面层按 GameState.ui_scale 缩放；根节点大小 = 屏幕 / 缩放，这样贴边的面板仍然贴在屏幕边上
+func _fit_help() -> void:
+	if help_panel.visible:
+		help_scroll.custom_minimum_size = Vector2(620, clampf(root.size.y - 170.0, 160.0, 480.0))
+		help_scroll.scroll_vertical = 0
+
+
 func apply_ui_scale() -> void:
 	var s := GameState.ui_scale
 	scale = Vector2(s, s)
 	root.position = Vector2.ZERO
 	root.size = get_viewport().get_visible_rect().size / s
+	if help_panel != null:
+		_fit_help()
 
 
 func set_ui_scale(s: float) -> void:
