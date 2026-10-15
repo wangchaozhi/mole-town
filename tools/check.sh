@@ -5,6 +5,9 @@
 set -u
 cd "$(dirname "$0")/.." || exit 1
 GODOT="${GODOT:-godot}"
+# 测试的日志写到临时目录，不占用游戏自己的日志目录（玩家游玩的日志才不会被测试挤掉）
+LOGDIR=$(mktemp -d)
+LOGARG=(--log-file "$LOGDIR/godot.log")
 fail=0
 
 # 1. 字符串里混进了真换行（引号数量为奇数的行）——GDScript 不报错，但显示会出问题
@@ -24,9 +27,9 @@ done
 [ $fail -ne 0 ] && exit 1
 
 # 4. 导入资源 + 冒烟测试；日志里有脚本错误也算失败（Godot 遇到解析错误时退出码不一定非 0）
-"$GODOT" --headless --path . --import > /dev/null 2>&1
+"$GODOT" "${LOGARG[@]}" --headless --path . --import > /dev/null 2>&1
 log=$(mktemp)
-timeout 120 "$GODOT" --headless --path . res://tests/smoke_test.tscn -- --profile=smoke > "$log" 2>&1
+timeout 120 "$GODOT" "${LOGARG[@]}" --headless --path . res://tests/smoke_test.tscn -- --profile=smoke > "$log" 2>&1
 rc=$?
 grep -E "✗|====" "$log"
 if [ $rc -ne 0 ] || grep -q "SCRIPT ERROR" "$log"; then
@@ -37,7 +40,7 @@ fi
 
 # 5. 可选：浸泡测试（机器人随机玩 1 分钟）
 if [ "${1:-}" = "--soak" ]; then
-	timeout 180 "$GODOT" --headless --path . res://tests/soak_test.tscn -- --profile=soak > "$log" 2>&1
+	timeout 180 "$GODOT" "${LOGARG[@]}" --headless --path . res://tests/soak_test.tscn -- --profile=soak > "$log" 2>&1
 	grep "浸泡测试结束" "$log"
 	if grep -q "SCRIPT ERROR" "$log"; then
 		echo "✗ 浸泡测试出现脚本错误"
