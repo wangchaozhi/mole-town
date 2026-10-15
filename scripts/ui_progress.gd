@@ -55,6 +55,21 @@ func _refresh_collection() -> void:
 	collection_body.add_child(_item_row(GameState.FISH.keys()))
 	collection_body.add_child(ui._label("料理", 18))
 	collection_body.add_child(_item_row(GameState.DISHES.keys()))
+	var hats: Array = GameState.HATS.keys().filter(func(h): return h != "none")
+	var owned: Array = hats.filter(func(h): return h in GameState.owned_hats)
+	var hat_names := PackedStringArray()
+	for h in hats:
+		var hn: String = GameState.HATS[h]["name"] if h in GameState.owned_hats else "？？？"
+		if not GameState.HATS[h].get("shop", true):
+			hn += "（%s）" % ("剧情" if h == "star_pin" else "扭蛋")
+		hat_names.append(hn)
+	var hat_l: Label = ui._label("帽子收藏（%d/%d）：%s" % [owned.size(), hats.size(), "、".join(hat_names)], 15)
+	hat_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hat_l.custom_minimum_size = Vector2(620, 0)
+	collection_body.add_child(hat_l)
+	var st := GameState.stats
+	collection_body.add_child(ui._label("四季发现：四叶草 %d · 萤火虫 %d · 落叶堆 / 雪堆 %d · 扭蛋 %d 次" % [
+		int(st.get("clovers", 0)), int(st.get("fireflies", 0)), int(st.get("leaf_piles", 0)), int(st.get("gacha", 0))], 15))
 	collection_body.add_child(ui._label("成就（%d/%d）" % [GameState.achievements.size(), GameState.ACHIEVEMENTS.size()], 18))
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(620, 150)
