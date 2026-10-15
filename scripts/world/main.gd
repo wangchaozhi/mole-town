@@ -21,6 +21,7 @@ const Spot = preload("res://scripts/world/spot.gd")
 const TutorialArrow = preload("res://scripts/world/tutorial_arrow.gd")
 const Sprinkler = preload("res://scripts/world/sprinkler.gd")
 const Events = preload("res://scripts/events/events.gd")
+const MainNet = preload("res://scripts/world/main_net.gd")
 const COTTAGE_POS := Vector2(1010, 1175)
 const INTERIOR_WALK := Rect2(3030, 320, 420, 185)
 const WORLD_WALK := Rect2(40, 150, 2320, 1210)
@@ -40,6 +41,7 @@ const SLEEP_SPOTS := {
 }
 
 var remotes := {}  # peer_id -> 远程玩家节点
+var mp  # main_net.gd：联机同步
 var plots := []
 var cam: Camera2D
 var zoom_level := 1.0
@@ -144,177 +146,10 @@ func _ready() -> void:
 		GameState.toast.emit("欢迎回来！你不在的时候，农场的作物也在生长哦~")
 	GameState.offline_seconds = 0.0
 
-	# 联机
-	Net.roster_changed.connect(_on_roster_changed)
-	Net.peer_moved.connect(_on_peer_moved)
-	Net.peer_chat.connect(_on_peer_chat)
-	Net.gift_received.connect(_on_gift)
-	Net.item_received.connect(_on_item_gift)
-	Net.peer_emote.connect(_on_peer_emote)
-	if not GameState.hat_changed.is_connected(Net.send_info):
-		GameState.hat_changed.connect(Net.send_info)
-	var sync := Timer.new()
-	sync.wait_time = 0.1
-	sync.autostart = true
-	sync.timeout.connect(func():
-		Net.send_move(player.position, player.target if player.moving else player.position, player.fishing, my_farm()))
-	add_child(sync)
-	_on_roster_changed()
-
-	# 串门
-	Net.visit_changed.connect(_on_visit_changed)
-	Net.farm_visitor_joined.connect(_on_farm_visitor)
-	Net.farm_received.connect(_on_farm_received)
-	Net.farm_action_requested.connect(_on_farm_action_requested)
-	Net.farm_action_result.connect(_on_farm_action_result)
-	var farm_sync := Timer.new()
-	farm_sync.wait_time = 1.0
-	farm_sync.autostart = true
-	farm_sync.timeout.connect(func():
-		if not Net.visitors.is_empty():
-			Net.push_farm(_farm_states()))
-	add_child(farm_sync)
-
-
-## 我现在所在的是谁家的农场（串门时是主人的 id，否则是自己的 id）
-func my_farm() -> int:
-	return Net.visiting if Net.visiting != 0 else Net.my_id()
-
-
-func _farm_states() -> Dictionary:
-	var out := []
-	for p in plots:
-		out.append(p.get_state())
-	return {"plots": out, "home": GameState.home}
-
-
-func _on_visit_changed() -> void:
-	if Net.visiting == 0:
-		for p in plots:
-			p.clear_remote()
-		farm_sign.text = "开心农场"
-		home_sign.text = "我的小院"
-		_build_home(GameState.home, false)
-	else:
-		for p in plots:
-			p.set_remote({})  # 收到主人数据前先显示空地
-		farm_sign.text = "%s的农场" % Net.player_name(Net.visiting)
-		home_sign.text = "%s的小院" % Net.player_name(Net.visiting)
-		cancel_placing()
-		_build_home([], true)
-		if inside:
-			exit_home()
-		player.position = Vector2(1845, 1240)
-		player.target = player.position
-		player.moving = false
-		player.pending = null
-	farm_sign.queue_redraw()
-	home_sign.queue_redraw()
-
-
-func _on_farm_visitor(id: int) -> void:
-	GameState.toast.emit("%s 来你的农场串门啦！" % Net.player_name(id))
-	Net.push_farm(_farm_states())
-
-
-func _on_farm_received(data) -> void:
-	if typeof(data) != TYPE_DICTIONARY:
-		return
-	var states: Array = data.get("plots", [])
-	for i in mini(states.size(), plots.size()):
-		plots[i].set_remote(states[i])
-	var list := []
-	for f in data.get("home", []):
-		if typeof(f) == TYPE_DICTIONARY and GameState.FURNITURE.has(str(f.get("id", ""))):
-			var p := Vector2(float(f.get("x", 0)), float(f.get("y", 0)))
-			if GameState.HOME_RECT.has_point(p):
-				list.append({"id": str(f["id"]), "x": p.x, "y": p.y})
-	_build_home(list.slice(0, 40), true)
-
-
-func _on_farm_action_requested(id: int, plot_id: int, action: String) -> void:
-	if plot_id < 0 or plot_id >= plots.size():
-		return
-	var r: Array = plots[plot_id].remote_action(action, Net.player_name(id))
-	Net.reply_farm_action(id, r[0], r[1], r[2])
-	Net.push_farm(_farm_states())
-
-
-func _on_farm_action_result(msg: String, item: String, beans: int) -> void:
-	if item != "":
-		GameState.add_item(item)
-		GameState.record("harvest", item)
-	if beans > 0:
-		if GameState.help_today >= HELP_REWARDS_PER_DAY:
-			msg = "谢谢你的帮忙！（今天的帮忙奖励已经领满啦）"
-		else:
-			GameState.help_today += 1
-			GameState.add_beans(beans)
-			GameState.record("help")
-	GameState.toast.emit(msg)
-
-
-func _on_roster_changed() -> void:
-	var me := Net.my_id()
-	for id in Net.players:
-		if id == me:
-			continue
-		var info: Dictionary = Net.players[id]
-		if not remotes.has(id):
-			var r = RemoteMole.new()
-			r.peer_id = id
-			r.position = Vector2(1200, 880) + Vector2(randf_range(-60, 60), randf_range(-30, 30))
-			ysort.add_child(r)
-			remotes[id] = r
-			var lh = Lahm.new()
-			lh.is_remote = true
-			lh.player = r
-			lh.position = r.position + Vector2(-50, 0)
-			ysort.add_child(lh)
-			r.lahm = lh
-			Sfx.play("door")
-			ui.add_chat_line("", "【系统】%s 来到了小镇" % info["name"], Color(1, 0.9, 0.4))
-		remotes[id].apply_info(info)
-		if is_instance_valid(remotes[id].lahm):
-			remotes[id].lahm.level = int(info["lahm"])
-			remotes[id].lahm.acc = str(info["lacc"])
-	for id in remotes.keys():
-		if not Net.players.has(id) or id == me:
-			if Net.players.size() > 0:
-				ui.add_chat_line("", "【系统】%s 离开了小镇" % remotes[id].display_name, Color(1, 0.9, 0.4))
-			if is_instance_valid(remotes[id].lahm):
-				remotes[id].lahm.queue_free()
-			remotes[id].queue_free()
-			remotes.erase(id)
-
-
-func _on_peer_moved(id: int, pos: Vector2, to: Vector2, is_fishing: bool, farm: int) -> void:
-	if remotes.has(id):
-		remotes[id].net_move(pos, to, is_fishing)
-		remotes[id].farm = farm
-
-
-## 每个人的农场画在地图同一块地方：别人在“另一家”的农场里时，不在我的农场区域显示
-func _update_remote_visibility() -> void:
-	var mine := my_farm()
-	for r in remotes.values():
-		r.visible = r.farm == mine or not _is_private(r.position)
-		if is_instance_valid(r.lahm):
-			r.lahm.visible = r.visible and (r.farm == mine or not _is_private(r.lahm.position))
-
-
-func _on_peer_chat(id: int, text: String) -> void:
-	Sfx.play("pop")
-	if remotes.has(id):
-		remotes[id].say(text)
-	ui.add_chat_line(Net.player_name(id), text)
-
-
-func _on_gift(id: int, beans: int) -> void:
-	Sfx.play("gift")
-	GameState.add_beans(beans)
-	GameState.toast.emit("%s 送给你 %d 摩尔豆！" % [Net.player_name(id), beans])
-
+	mp = MainNet.new()
+	mp.main = self
+	add_child(mp)
+	mp.setup()
 
 func _prop(kind: String, pos: Vector2, text: String = "", size: Vector2 = Vector2.ZERO) -> Node2D:
 	var p = Prop.new()
@@ -465,7 +300,7 @@ func _process(delta: float) -> void:
 	if ghost != null:
 		ghost.position = get_global_mouse_position()
 		ghost.set_valid(_can_place(ghost.position))
-	_update_remote_visibility()
+	mp.update_remote_visibility()
 
 
 func _sky_color(h: float) -> Color:
@@ -563,7 +398,7 @@ func _try_place(p: Vector2) -> void:
 	cancel_placing()
 	_build_home(GameState.home, false)
 	if not Net.visitors.is_empty():
-		Net.push_farm(_farm_states())
+		Net.push_farm(mp.farm_states())
 
 
 func store_furniture(i: int) -> void:
@@ -602,16 +437,6 @@ func teleport(p: Vector2) -> void:
 	fx.pop(p)
 	Sfx.play("door")
 	player.play_emote("happy")
-
-
-func _on_item_gift(id: int, item: String, n: int) -> void:
-	Sfx.play("gift")
-	GameState.add_item(item, n)
-	var msg := "%s 送给你 %s ×%d！" % [Net.player_name(id), GameState.item_name(item), n]
-	GameState.toast.emit(msg)
-	ui.add_chat_line("", "【礼物】" + msg, Color(1, 0.8, 0.9))
-	if remotes.has(id):
-		remotes[id].play_emote("happy")
 
 
 # ---------- 镜头缩放：滚轮、+/- 键、触屏双指捏合 ----------
@@ -813,54 +638,3 @@ func _build_castle_hall() -> void:
 func castle_gate() -> void:
 	ui.show_dialog("摩尔城堡", "城堡大门开着，里面传来国王的笑声。要做什么呢？",
 		[["进入城堡", enter_room.bind("castle")], ["玩接果子小游戏", ui.open_minigame_intro], ["离开", ui._noop]])
-
-
-# ---------- 一起跳舞 ----------
-# 附近的好友在 3 秒内做了同一个表情，双方各自判定“合拍”，都会得到奖励（20 秒冷却）
-
-const DANCE_RANGE := 220.0
-const DANCE_WINDOW := 3.0
-
-var my_emote := ""
-var my_emote_t := -100.0
-var dance_cooldown_until := 0.0
-
-
-func _now() -> float:
-	return Time.get_ticks_msec() / 1000.0
-
-
-func _on_peer_emote(id: int, kind: String) -> void:
-	if not remotes.has(id):
-		return
-	var r = remotes[id]
-	r.play_emote(kind)
-	r.set_meta("emote_kind", kind)
-	r.set_meta("emote_t", _now())
-	if kind == my_emote and _now() - my_emote_t < DANCE_WINDOW:
-		_try_dance(r)
-
-
-## 自己做了表情（ui.do_emote 调用）
-func on_local_emote(kind: String) -> void:
-	my_emote = kind
-	my_emote_t = _now()
-	for r in remotes.values():
-		if r.get_meta("emote_kind", "") == kind and _now() - float(r.get_meta("emote_t", -100.0)) < DANCE_WINDOW:
-			_try_dance(r)
-			return
-
-
-func _try_dance(r) -> void:
-	if _now() < dance_cooldown_until or not r.visible or r.position.distance_to(player.position) > DANCE_RANGE:
-		return
-	dance_cooldown_until = _now() + 20.0
-	GameState.add_beans(5)
-	GameState.stats["dances"] = int(GameState.stats.get("dances", 0)) + 1
-	GameState.check_achievements()
-	GameState.toast.emit("和 %s 一起跳舞，太合拍啦！+5 摩尔豆" % r.display_name)
-	Sfx.play("happy")
-	player.play_emote("happy")
-	var lahm = get_tree().get_first_node_in_group("my_lahm")
-	if lahm != null:
-		lahm._burst()

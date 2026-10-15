@@ -123,7 +123,7 @@ func do_emote(kind: String) -> void:
 		return
 	ui.player.play_emote(kind)
 	Net.send_emote(kind)
-	ui.get_parent().on_local_emote(kind)
+	ui.get_parent().mp.on_local_emote(kind)
 	Sfx.play("pop")
 	# 附近的 NPC 会回应
 	var best = null

@@ -12,7 +12,7 @@ jobs:
     env:
       GODOT_VERSION: 4.7.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: 下载 Godot（无界面运行）
         run: |
