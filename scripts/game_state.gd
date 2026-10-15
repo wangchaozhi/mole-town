@@ -1,6 +1,10 @@
 extends Node
 ## 全局状态（自动加载）：摩尔豆、背包、任务、时间、存档。
 
+const ItemData = preload("res://scripts/data/items.gd")
+const ProgressData = preload("res://scripts/data/progress.gd")
+const StoryData = preload("res://scripts/data/story.gd")
+
 signal beans_changed
 signal inventory_changed
 signal quest_changed
@@ -14,64 +18,18 @@ const EMOTE_ORDER := ["wave", "happy", "angry", "cry", "sing", "sleep"]
 const DAY_MINUTES := 1440.0
 const REAL_SECONDS_PER_DAY := 300.0  # 现实 5 分钟 = 游戏 1 天
 
-const CROPS := {
-	"carrot": {"name": "萝卜", "seed_price": 5, "sell": 12, "grow_time": 25.0, "level": 1, "exp": 2, "seasons": [0, 2], "color": Color(1.0, 0.55, 0.15)},
-	"strawberry": {"name": "草莓", "seed_price": 12, "sell": 30, "grow_time": 45.0, "level": 1, "exp": 3, "seasons": [0], "color": Color(0.95, 0.2, 0.3)},
-	"corn": {"name": "玉米", "seed_price": 18, "sell": 45, "grow_time": 60.0, "level": 2, "exp": 4, "seasons": [1], "color": Color(1.0, 0.85, 0.3)},
-	"pumpkin": {"name": "南瓜", "seed_price": 25, "sell": 70, "grow_time": 80.0, "level": 3, "exp": 6, "seasons": [2], "color": Color(1.0, 0.6, 0.1)},
-	"sunflower": {"name": "向日葵", "seed_price": 40, "sell": 120, "grow_time": 120.0, "level": 5, "exp": 9, "seasons": [1], "color": Color(1.0, 0.85, 0.1)},
-	"watermelon": {"name": "西瓜", "seed_price": 60, "sell": 180, "grow_time": 150.0, "level": 7, "exp": 14, "seasons": [1], "color": Color(0.3, 0.68, 0.3)},
-}
+const CROPS = ItemData.CROPS
 
-const FISH := {
-	"small_fish": {"name": "小鱼", "sell": 8, "weight": 50, "color": Color(0.55, 0.72, 0.88), "size": [8, 20]},
-	"big_fish": {"name": "大鱼", "sell": 22, "weight": 28, "color": Color(0.3, 0.5, 0.82), "size": [30, 62]},
-	"gold_fish": {"name": "金鱼", "sell": 60, "weight": 8, "color": Color(1.0, 0.75, 0.15), "size": [14, 30]},
-	"boot": {"name": "破靴子", "sell": 1, "weight": 14, "color": Color(0.5, 0.35, 0.25)},
-	# 季节限定的鱼：只在对应季节能钓到
-	"sakura_fish": {"name": "樱花鱼", "sell": 32, "weight": 14, "season": 0, "color": Color(1.0, 0.65, 0.78), "size": [18, 34]},
-	"tropical_fish": {"name": "热带鱼", "sell": 36, "weight": 14, "season": 1, "color": Color(0.2, 0.8, 0.75), "size": [12, 26]},
-	"maple_carp": {"name": "枫叶鲤", "sell": 40, "weight": 14, "season": 2, "color": Color(0.9, 0.4, 0.15), "size": [30, 56]},
-	"ice_fish": {"name": "冰鱼", "sell": 45, "weight": 14, "season": 3, "color": Color(0.75, 0.9, 1.0), "size": [18, 34]},
-}
+const FISH = ItemData.FISH
 
-const HATS := {
-	"none": {"name": "不戴帽子", "price": 0},
-	"red_cap": {"name": "红色小帽", "price": 80},
-	"straw": {"name": "草帽", "price": 120},
-	"flower": {"name": "小花发卡", "price": 150},
-	"crown": {"name": "小王冠", "price": 500, "level": 6},
-	"wizard": {"name": "魔法帽", "price": 800, "level": 8},
-	"star_pin": {"name": "星星发卡", "price": 0, "level": 1, "shop": false},  # 主线剧情奖励
-	"bunny": {"name": "兔耳朵", "price": 0, "level": 1, "shop": false},  # 扭蛋限定
-	"chick": {"name": "小黄鸡", "price": 0, "level": 1, "shop": false},  # 扭蛋限定
-}
+const HATS = ItemData.HATS
 
 const LAHM_FRUIT_PRICE := 15
 const FERTILIZER_PRICE := 25  # 肥料：作物生长 ×1.5，收获必定多 1 个
 const FERTILIZER_LEVEL := 2
 const GIANT_CHANCE := 0.04  # 作物成熟时长成巨型的概率（施肥 ×3）
 
-const FURNITURE := {
-	"pot": {"name": "小花盆", "price": 30, "level": 1},
-	"mailbox": {"name": "邮筒", "price": 40, "level": 1},
-	"table": {"name": "下午茶桌", "price": 60, "level": 1},
-	"bench": {"name": "长椅", "price": 70, "level": 2},
-	"lantern": {"name": "小灯笼", "price": 80, "level": 2},
-	"scarecrow": {"name": "稻草人", "price": 100, "level": 3},
-	"campfire": {"name": "篝火", "price": 120, "level": 4},
-	"swing": {"name": "秋千", "price": 160, "level": 5},
-	"lahm_house": {"name": "拉姆小屋", "price": 220, "level": 6},
-	"windmill": {"name": "风车", "price": 320, "level": 8},
-	# 季节限定：只在对应季节的商店里卖
-	"sakura_bonsai": {"name": "樱花盆景", "price": 150, "level": 2, "season": 0},
-	"melon_chair": {"name": "西瓜躺椅", "price": 150, "level": 2, "season": 1},
-	"pumpkin_lamp": {"name": "南瓜灯", "price": 150, "level": 2, "season": 2},
-	"snowman": {"name": "雪人", "price": 150, "level": 2, "season": 3},
-	"trophy": {"name": "金奖杯", "price": 0, "level": 1, "shop": false},  # 国王的每周挑战奖励，商店不卖
-	"telescope": {"name": "望远镜", "price": 0, "level": 1, "shop": false},  # 旅行商人卖的
-	"firefly_jar": {"name": "萤火虫灯", "price": 0, "level": 1, "shop": false},  # 累计抓 10 只萤火虫的奖励
-}
+const FURNITURE = ItemData.FURNITURE
 const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围
 
 var beans: int = 100
@@ -600,34 +558,7 @@ func reset_game() -> void:
 
 # ---------- 图鉴 / 成就 ----------
 
-const ACHIEVEMENTS := [
-	{"id": "first_harvest", "name": "第一次收获", "desc": "收获 1 个作物", "stat": "harvest_total", "target": 1, "reward": 20},
-	{"id": "farmer", "name": "勤劳的农夫", "desc": "累计收获 50 个作物", "stat": "harvest_total", "target": 50, "reward": 150},
-	{"id": "all_crops", "name": "作物大全", "desc": "每种作物都收获过", "stat": "crop_kinds", "target": 6, "reward": 120},
-	{"id": "first_fish", "name": "初次垂钓", "desc": "钓到 1 条鱼", "stat": "fish_total", "target": 1, "reward": 20},
-	{"id": "angler", "name": "钓鱼达人", "desc": "累计钓到 30 条鱼", "stat": "fish_total", "target": 30, "reward": 150},
-	{"id": "gold_fish", "name": "金光闪闪", "desc": "钓到一条金鱼", "stat": "c:gold_fish", "target": 1, "reward": 100},
-	{"id": "all_fish", "name": "湖中宝藏", "desc": "集齐湖里能钓到的所有东西（包括四季限定的鱼）", "stat": "fish_kinds", "target": 8, "reward": 120},
-	{"id": "quests", "name": "乐乐的好帮手", "desc": "完成 10 个乐乐的任务", "stat": "quests_done", "target": 10, "reward": 200},
-	{"id": "rich", "name": "小富翁", "desc": "同时拥有 1000 摩尔豆", "stat": "beans", "target": 1000, "reward": 100},
-	{"id": "visitor", "name": "串门达人", "desc": "去好友家串门 1 次", "stat": "visits", "target": 1, "reward": 30},
-	{"id": "helper", "name": "热心邻居", "desc": "去好友农场帮忙 10 次", "stat": "help_total", "target": 10, "reward": 100},
-	{"id": "fashion", "name": "时尚达人", "desc": "集齐所有帽子", "stat": "hats", "target": 5, "reward": 200},
-	{"id": "lahm_friend", "name": "拉姆的好朋友", "desc": "把拉姆培养到 5 级", "stat": "lahm_level", "target": 5, "reward": 300},
-	{"id": "level10", "name": "小镇达人", "desc": "升到 10 级", "stat": "player_level", "target": 10, "reward": 500},
-	{"id": "popular", "name": "小镇人气王", "desc": "和一位 NPC 成为好朋友（好感 100）", "stat": "max_affinity", "target": 100, "reward": 200},
-	{"id": "catcher", "name": "接果子高手", "desc": "在接果子小游戏里拿到 40 分", "stat": "best_catch", "target": 40, "reward": 150},
-	{"id": "lucky", "name": "幸运儿", "desc": "钓鱼时钓到一个宝箱", "stat": "treasures", "target": 1, "reward": 100},
-	{"id": "stargazer", "name": "追星的小摩尔", "desc": "对着流星许 5 个愿望", "stat": "wishes", "target": 5, "reward": 120},
-	{"id": "story", "name": "城堡的秘密", "desc": "完成主线剧情", "stat": "story_done", "target": 1, "reward": 200},
-	{"id": "dancer", "name": "舞林高手", "desc": "和好友一起合拍地做 5 次表情", "stat": "dances", "target": 5, "reward": 150},
-	{"id": "chef", "name": "小厨神", "desc": "累计做 20 道菜", "stat": "cook_total", "target": 20, "reward": 200},
-	{"id": "giant", "name": "巨无霸", "desc": "收获一个巨型作物", "stat": "giants", "target": 1, "reward": 120},
-	{"id": "hide_seek", "name": "捉迷藏冠军", "desc": "和拉姆玩捉迷藏，找到它 3 次", "stat": "hide_found", "target": 3, "reward": 100},
-	{"id": "fireflies", "name": "夏夜萤火", "desc": "夏天的夜里抓 10 只萤火虫", "stat": "fireflies", "target": 10, "reward": 120},
-	{"id": "clover", "name": "幸运四叶草", "desc": "春天里找到 3 棵四叶草", "stat": "clovers", "target": 3, "reward": 120},
-	{"id": "all_dishes", "name": "美食家", "desc": "每道菜都做过", "stat": "dish_kinds", "target": 7, "reward": 250},
-]
+const ACHIEVEMENTS = ProgressData.ACHIEVEMENTS
 
 const SIGNIN_REWARDS := [20, 30, 40, 50, 60, 80, 150]  # 连续签到第 1~7 天的摩尔豆，第 7 天另送 3 颗向日葵种子
 
@@ -895,14 +826,7 @@ func is_giftable(id: String) -> bool:
 
 # ---------- NPC 好感度 ----------
 
-const NPC_INFO := {
-	"乐乐": {"birthday": 3, "likes": ["strawberry", "sunflower", "strawberry_cake"], "rewards": {20: ["lahm_fruit", 3], 50: ["beans", 100], 100: ["furn_lahm_house", 1]}},
-	"店长豆豆": {"birthday": 9, "likes": ["gold_fish", "watermelon", "carrot_soup"], "rewards": {20: ["seed_corn", 3], 50: ["beans", 150], 100: ["furn_lantern", 2]}},
-	"小黄": {"birthday": 13, "likes": ["corn", "carrot", "grilled_corn"], "rewards": {20: ["seed_strawberry", 3], 50: ["furn_bench", 1], 100: ["beans", 200]}},
-	"嘟嘟": {"birthday": 17, "likes": ["big_fish", "small_fish", "fish_soup", "ice_fish"], "rewards": {20: ["lahm_fruit", 2], 50: ["furn_campfire", 1], 100: ["beans", 250]}},
-	"米米": {"birthday": 23, "likes": ["pumpkin", "strawberry", "pumpkin_pie"], "rewards": {20: ["seed_pumpkin", 3], 50: ["furn_pot", 2], 100: ["furn_swing", 1]}},
-	"阿呆": {"birthday": 26, "likes": ["watermelon", "gold_fish", "watermelon_smoothie"], "rewards": {20: ["beans", 50], 50: ["furn_scarecrow", 1], 100: ["furn_windmill", 1]}},
-}
+const NPC_INFO = StoryData.NPC_INFO
 
 var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
 
@@ -920,13 +844,7 @@ func is_lucky() -> bool:
 
 # ---------- 周末的旅行商人 ----------
 
-## 每周第 6、7 天（周末）的白天，旅行商人阿布会在湖边摆摊
-const MERCHANT_STOCK := [
-	{"id": "mystery_seed", "n": 1, "price": 60, "desc": "随机 2 颗种子，可能是没解锁的作物"},
-	{"id": "furn_telescope", "n": 1, "price": 400, "desc": "远方运来的铜望远镜，摆在小院里很神气"},
-	{"id": "fertilizer", "n": 5, "price": 100, "desc": "肥料 5 袋装，比商店便宜"},
-	{"id": "lahm_fruit", "n": 10, "price": 120, "desc": "拉姆果 10 个装，比商店便宜"},
-]
+const MERCHANT_STOCK = ItemData.MERCHANT_STOCK
 
 
 func merchant_day(d: int = -1) -> bool:
@@ -1221,15 +1139,7 @@ func season_growth(crop: String) -> float:
 
 # ---------- 烹饪 ----------
 
-const DISHES := {
-	"carrot_soup": {"name": "萝卜汤", "needs": {"carrot": 2}, "sell": 35, "exp": 4, "color": Color(1.0, 0.6, 0.25)},
-	"fish_soup": {"name": "鲜鱼汤", "needs": {"big_fish": 1, "carrot": 1}, "sell": 48, "exp": 5, "color": Color(0.95, 0.92, 0.82)},
-	"strawberry_cake": {"name": "草莓蛋糕", "needs": {"strawberry": 2, "corn": 1}, "sell": 140, "exp": 8, "color": Color(1.0, 0.55, 0.65)},
-	"grilled_corn": {"name": "烤玉米", "needs": {"corn": 2}, "sell": 110, "exp": 6, "color": Color(0.95, 0.75, 0.25)},
-	"pumpkin_pie": {"name": "南瓜派", "needs": {"pumpkin": 1, "strawberry": 1}, "sell": 130, "exp": 8, "color": Color(0.95, 0.55, 0.15)},
-	"watermelon_smoothie": {"name": "西瓜冰沙", "needs": {"watermelon": 1, "strawberry": 1}, "sell": 250, "exp": 12, "color": Color(1.0, 0.4, 0.45)},
-	"lahm_meal": {"name": "拉姆特制饭", "needs": {"carrot": 1, "small_fish": 1}, "sell": 30, "exp": 5, "color": Color(1.0, 0.75, 0.85)},
-}
+const DISHES = ItemData.DISHES
 
 
 func can_cook(dish: String) -> bool:
@@ -1293,14 +1203,7 @@ func can_sleep() -> bool:
 
 # ---------- 新手引导 ----------
 
-const TUTORIAL := [
-	{"text": "点击农场（右下）里的空地，种下一颗萝卜", "event": "plant", "target": "farm"},
-	{"text": "再点一下刚种下的萝卜，给它浇水", "event": "water", "target": "farm"},
-	{"text": "去钓鱼湖（左下）点击湖面，钓一条鱼", "event": "fish", "target": "pond"},
-	{"text": "去摩尔百货找店长豆豆，买一颗种子", "event": "buy_seed", "target": "shop"},
-	{"text": "去广场找乐乐聊聊，她会给你任务", "event": "talk_lele", "target": "lele"},
-	{"text": "点击你的拉姆，喂喂它或者摸摸它", "event": "lahm", "target": "lahm"},
-]
+const TUTORIAL = ProgressData.TUTORIAL
 
 signal tutorial_changed
 
@@ -1333,12 +1236,7 @@ func skip_tutorial() -> void:
 
 # ---------- 拉姆饰品 ----------
 
-const LAHM_ACCS := {
-	"none": {"name": "不戴饰品", "price": 0},
-	"bow": {"name": "蝴蝶结", "price": 60},
-	"glasses": {"name": "小眼镜", "price": 90},
-	"scarf": {"name": "小围巾", "price": 120},
-}
+const LAHM_ACCS = ItemData.LAHM_ACCS
 
 signal lahm_acc_changed
 
@@ -1355,12 +1253,7 @@ func set_lahm_acc(id: String) -> void:
 # ---------- 国王的每周挑战 ----------
 # 每 7 个游戏日一周，挑战内容按周轮换；进度 = 这一周里对应统计增加了多少
 
-const WEEKLY := [
-	{"stat": "harvest_total", "target": 20, "text": "收获 20 个作物"},
-	{"stat": "fish_total", "target": 10, "text": "钓到 10 条鱼"},
-	{"stat": "cook_total", "target": 5, "text": "做 5 道菜"},
-	{"stat": "quests_done", "target": 3, "text": "完成 3 个乐乐的任务"},
-]
+const WEEKLY = ProgressData.WEEKLY
 const WEEKLY_REWARD := 300
 
 var weekly_week := -1
@@ -1451,11 +1344,7 @@ func _read_save(path: String):
 
 # ---------- 工具升级 ----------
 
-const RODS := [
-	{"name": "普通鱼竿", "price": 0, "level": 1},
-	{"name": "好鱼竿", "price": 300, "level": 3},
-	{"name": "金鱼竿", "price": 800, "level": 6},
-]
+const RODS = ItemData.RODS
 const SPRINKLER_PRICE := 600
 const SPRINKLER_LEVEL := 5
 
@@ -1486,14 +1375,7 @@ func buy_sprinkler() -> bool:
 
 # ---------- 信箱 ----------
 
-const MAIL_LINES := {
-	"乐乐": ["最近农场种得怎么样？给你寄了点小东西~", "谢谢你一直帮我做任务！这是一点心意。"],
-	"店长豆豆": ["摩尔百货感谢你的光临！附上一点小礼物。", "下次来店里，记得看看今天的特价哦~"],
-	"小黄": ["我在广场上看到你啦！送你点东西~", "一起去钓鱼吧！先送你点好东西。"],
-	"嘟嘟": ["今天湖边的风好舒服，给你寄了点东西。", "钓鱼的诀窍是耐心哦！附赠小礼物~"],
-	"米米": ["我的草莓熟了，分你一点！", "农场的害虫被你抓走了好多，谢谢你！"],
-	"阿呆": ["城堡守卫阿呆来信！附上一点心意。", "嘿嘿，猜猜我给你寄了什么？"],
-}
+const MAIL_LINES = StoryData.MAIL_LINES
 
 signal mail_changed
 
@@ -1602,20 +1484,7 @@ func buy_greenhouse() -> bool:
 
 # ---------- 主线剧情「城堡的秘密」 ----------
 
-const STORY := [
-	{"text": "去城堡附近找守卫阿呆聊聊", "event": "talk_阿呆", "target": "adai",
-		"beat": ["阿呆", "嘿嘿，告诉你一个秘密：国王最近总是愁眉苦脸的，好像丢了什么重要的东西……听说他前几天在钓鱼湖边散过步。"]},
-	{"text": "在钓鱼湖钓 3 次鱼，找找国王丢的东西", "event": "fish", "count": 3, "target": "pond",
-		"beat": ["钓鱼湖", "鱼线猛地一沉——钓上来一把生锈的旧钥匙！上面刻着城堡的徽章。"]},
-	{"text": "把旧钥匙交给城堡大厅里的摩尔国王", "event": "talk_摩尔国王", "target": "castle",
-		"beat": ["摩尔国王", "这是……城堡地下室的钥匙！太谢谢你了。不过我饿得讲不动故事了，能给我做一道菜吗？"]},
-	{"text": "去广场的小厨房做一道菜", "event": "cook", "target": "stove",
-		"beat": ["小厨房", "香喷喷的菜做好了，快趁热送去给国王吧！"]},
-	{"text": "把做好的菜送给摩尔国王", "event": "talk_摩尔国王", "target": "castle",
-		"beat": ["摩尔国王", "真好吃！那我告诉你吧：很久以前，守护小镇的星星落进了钓鱼湖。只有在夜里，湖面才会映出它的光……晚上 9 点以后去湖边看看吧。"]},
-	{"text": "晚上 9 点以后去钓鱼湖边看看", "event": "night_pond", "target": "pond",
-		"beat": ["钓鱼湖", "湖面闪闪发光，一颗小星星从水里慢慢浮了上来，轻轻落在你的头上——变成了一枚星星发卡！"]},
-]
+const STORY = StoryData.STORY
 
 signal story_changed
 signal story_beat(title: String, text: String)
