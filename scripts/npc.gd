@@ -32,7 +32,9 @@ static func is_bedtime() -> bool:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	if not role in ["shop", "king"] and is_bedtime():
+	if role == "merchant":
+		visible = GameState.merchant_here()  # 只在周末白天出摊
+	if not role in ["shop", "king", "merchant"] and is_bedtime():
 		_night()
 		return
 	if sleeping:
@@ -82,6 +84,10 @@ func _draw() -> void:
 		D.ell(self, bp, Vector2(11, 14), Color(1, 0.4, 0.55))
 		D.ell(self, bp + Vector2(-4, -5), Vector2(3, 4), Color(1, 1, 1, 0.5))
 		draw_colored_polygon(PackedVector2Array([bp + Vector2(-3, 16), bp + Vector2(3, 16), bp + Vector2(0, 12)]), Color(1, 0.4, 0.55))
+
+
+func hit_test(p: Vector2) -> bool:
+	return visible and super.hit_test(p)
 
 
 func get_interact_point() -> Vector2:

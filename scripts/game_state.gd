@@ -69,6 +69,7 @@ const FURNITURE := {
 	"pumpkin_lamp": {"name": "南瓜灯", "price": 150, "level": 2, "season": 2},
 	"snowman": {"name": "雪人", "price": 150, "level": 2, "season": 3},
 	"trophy": {"name": "金奖杯", "price": 0, "level": 1, "shop": false},  # 国王的每周挑战奖励，商店不卖
+	"telescope": {"name": "望远镜", "price": 0, "level": 1, "shop": false},  # 旅行商人卖的
 	"firefly_jar": {"name": "萤火虫灯", "price": 0, "level": 1, "shop": false},  # 累计抓 10 只萤火虫的奖励
 }
 const HOME_RECT := Rect2(1110, 1060, 360, 260)  # 小院范围
@@ -176,6 +177,8 @@ func item_name(id: String) -> String:
 		return "肥料"
 	if id == "firefly":
 		return "萤火虫"
+	if id == "mystery_seed":
+		return "神秘种子袋"
 	if DISHES.has(id):
 		return DISHES[id]["name"]
 	if id.begins_with("furn_") and FURNITURE.has(id.substr(5)):
@@ -906,6 +909,45 @@ var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
 
 func is_lucky() -> bool:
 	return lucky_day == day
+
+
+# ---------- 周末的旅行商人 ----------
+
+## 每周第 6、7 天（周末）的白天，旅行商人阿布会在湖边摆摊
+const MERCHANT_STOCK := [
+	{"id": "mystery_seed", "n": 1, "price": 60, "desc": "随机 2 颗种子，可能是没解锁的作物"},
+	{"id": "furn_telescope", "n": 1, "price": 400, "desc": "远方运来的铜望远镜，摆在小院里很神气"},
+	{"id": "fertilizer", "n": 5, "price": 100, "desc": "肥料 5 袋装，比商店便宜"},
+	{"id": "lahm_fruit", "n": 10, "price": 120, "desc": "拉姆果 10 个装，比商店便宜"},
+]
+
+
+func merchant_day(d: int = -1) -> bool:
+	if d < 0:
+		d = day
+	return (d - 1) % 7 >= 5
+
+
+func merchant_here() -> bool:
+	var h := minutes / 60.0
+	return merchant_day() and h >= 8.0 and h < 20.0
+
+
+func merchant_buy(i: int) -> String:
+	var it: Dictionary = MERCHANT_STOCK[i]
+	if not spend_beans(int(it["price"])):
+		return "摩尔豆不够啦！"
+	add_item(str(it["id"]), int(it["n"]))
+	return "买到了 %s ×%d！" % [item_name(str(it["id"])), int(it["n"])]
+
+
+## 打开神秘种子袋：随机 2 颗种子（任何作物都可能，包括还没解锁的）
+func open_mystery_seed() -> String:
+	if not remove_item("mystery_seed"):
+		return ""
+	var cid: String = CROPS.keys().pick_random()
+	add_item("seed_" + cid, 2)
+	return "打开神秘种子袋：得到 %s ×2！" % item_name("seed_" + cid)
 
 
 # ---------- 扭蛋机 ----------

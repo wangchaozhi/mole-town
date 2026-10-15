@@ -476,6 +476,20 @@ func _run() -> void:
 	GameState.beans = 10
 	check(not GameState.gacha_spin()["ok"] and GameState.beans == 10, "豆子不够不能扭蛋")
 	GameState.beans = poor
+	var md0 := GameState.day
+	GameState.day = 6
+	check(GameState.merchant_day() and not GameState.merchant_day(8), "旅行商人周末才来")
+	GameState.add_beans(200)
+	GameState.merchant_buy(0)
+	var seeds_before := 0
+	for cid in GameState.CROPS:
+		seeds_before += GameState.count("seed_" + cid)
+	GameState.open_mystery_seed()
+	var seeds_after := 0
+	for cid in GameState.CROPS:
+		seeds_after += GameState.count("seed_" + cid)
+	check(seeds_after == seeds_before + 2 and GameState.count("mystery_seed") == 0, "神秘种子袋开出 2 颗种子")
+	GameState.day = md0
 	GameState.set_title("giant")
 	check(GameState.title == "giant" and p.title_label != null and p.title_label.text.contains("巨无霸"), "佩戴成就称号")
 	GameState.set_title("not_done_xyz")

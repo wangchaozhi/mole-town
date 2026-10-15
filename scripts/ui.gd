@@ -656,6 +656,13 @@ func _refresh_bag() -> void:
 			hb.add_child(l)
 			hb.add_child(_button("摆放", _place_from_bag.bind(str(id).substr(5))))
 			bag_list.add_child(hb)
+		elif str(id) == "mystery_seed":
+			var hb := HBoxContainer.new()
+			hb.add_child(l)
+			hb.add_child(_button("打开", func():
+				show_toast(GameState.open_mystery_seed())
+				_refresh_bag()))
+			bag_list.add_child(hb)
 		else:
 			bag_list.add_child(l)
 
@@ -852,6 +859,8 @@ func on_npc_interact(npc) -> void:
 			_lele_dialog(npc)
 		"king":
 			_king_dialog(npc)
+		"merchant":
+			_merchant_dialog(npc)
 		"shop":
 			var m := GameState.market()
 			show_dialog(_npc_title(npc), "欢迎光临摩尔百货！今天%s收购价特别高（×1.5），%s种子打 6 折哦~\n种子、拉姆果、漂亮的帽子，应有尽有，作物和鱼也可以卖给我。" % [GameState.item_name(m["hot"]), GameState.item_name(m["sale"])],
@@ -861,6 +870,22 @@ func on_npc_interact(npc) -> void:
 			if GameState.affinity(npc.display_name) >= 50 and randf() < 0.4:
 				text = "我们是好朋友啦！悄悄告诉你：" + text
 			show_dialog(_npc_title(npc), text, [["再聊聊", on_npc_interact.bind(npc)], ["送礼物", act.open_npc_gift.bind(npc)], ["再见", _noop]])
+
+
+func _merchant_dialog(npc) -> void:
+	var lines := PackedStringArray()
+	var opts := []
+	for i in GameState.MERCHANT_STOCK.size():
+		var it: Dictionary = GameState.MERCHANT_STOCK[i]
+		lines.append("· %s ×%d  %d豆：%s" % [GameState.item_name(str(it["id"])), int(it["n"]), int(it["price"]), it["desc"]])
+		opts.append(["买%s" % GameState.item_name(str(it["id"])), _merchant_buy.bind(i, npc)])
+	opts.append(["再见", _noop])
+	show_dialog("旅行商人阿布", "周末限定小摊！（你有 %d 豆）\n" % GameState.beans + "\n".join(lines), opts)
+
+
+func _merchant_buy(i: int, npc) -> void:
+	show_toast(GameState.merchant_buy(i))
+	_merchant_dialog(npc)
 
 
 func _npc_title(npc) -> String:

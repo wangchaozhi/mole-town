@@ -81,6 +81,7 @@ func _draw() -> void:
 		"pumpkin_lamp": _pumpkin_lamp()
 		"snowman": _snowman()
 		"firefly_jar": _firefly_jar()
+		"telescope": _telescope()
 
 
 func _pot() -> void:
@@ -255,6 +256,19 @@ func _pumpkin_lamp() -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(-12, -24), Vector2(-4, -24), Vector2(-8, -16)]), glow)
 	draw_colored_polygon(PackedVector2Array([Vector2(4, -24), Vector2(12, -24), Vector2(8, -16)]), glow)
 	draw_colored_polygon(PackedVector2Array([Vector2(-10, -10), Vector2(10, -10), Vector2(6, -5), Vector2(0, -8), Vector2(-6, -5)]), glow)
+
+
+func _telescope() -> void:
+	var wood := Color(0.5, 0.33, 0.2)
+	for lx in [-14.0, 0.0, 14.0]:
+		draw_line(Vector2(0, -26), Vector2(lx, 0), wood, 3.0)
+	var brass := Color(0.85, 0.65, 0.25)
+	var tube := PackedVector2Array([Vector2(-18, -22), Vector2(16, -44), Vector2(20, -38), Vector2(-14, -16)])
+	draw_colored_polygon(tube, brass)
+	draw_line(Vector2(-16, -19), Vector2(18, -41), brass.lightened(0.3), 2.0)
+	draw_circle(Vector2(18, -41), 5.0, brass.darkened(0.2))
+	draw_circle(Vector2(18, -41), 3.0, Color(0.6, 0.85, 1.0))
+	draw_circle(Vector2(0, -27), 3.5, wood.darkened(0.2))
 
 
 func _firefly_jar() -> void:
