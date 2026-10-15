@@ -1280,6 +1280,12 @@ func open_mail(i: int) -> String:
 
 
 ## 每天早上：一半概率收到某位 NPC 的信（好感越高礼物越好）；新的一周国王会来信
+## 好友来串门帮了一次忙（浇水 / 抓虫 / 摘菜）
+func record_guest(who: String) -> void:
+	var k := "guest:" + who.left(10)
+	day_log[k] = int(day_log.get(k, 0)) + 1
+
+
 ## 新的一天早上：把昨天的小结写成一封「小镇日报」放进信箱（昨天什么都没做就不发）
 func _daily_report() -> void:
 	var parts := PackedStringArray()
@@ -1287,11 +1293,19 @@ func _daily_report() -> void:
 		var v := int(day_log.get(k[0], 0))
 		if v > 0:
 			parts.append(str(k[1]) % v)
+	var guests := PackedStringArray()
+	for k in day_log:
+		if str(k).begins_with("guest:"):
+			guests.append("%s（%d 次）" % [str(k).substr(6), int(day_log[k])])
 	day_log = {}
-	if parts.is_empty():
+	if parts.is_empty() and guests.is_empty():
 		return
-	var praise := "真是勤劳的一天！" if parts.size() >= 3 else "今天也要加油哦~"
-	add_mail("小镇日报", "第 %d 天小结：你%s。%s" % [day - 1, "，".join(parts), praise])
+	var text := "第 %d 天小结：" % (day - 1)
+	if not parts.is_empty():
+		text += "你%s。%s" % ["，".join(parts), "真是勤劳的一天！" if parts.size() >= 3 else "今天也要加油哦~"]
+	if not guests.is_empty():
+		text += "\n来你家农场帮忙的好友：%s，记得去谢谢他们哦~" % "、".join(guests)
+	add_mail("小镇日报", text)
 
 
 func _daily_mail() -> void:

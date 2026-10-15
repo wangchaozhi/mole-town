@@ -98,6 +98,8 @@ func _on_farm_action_requested(id: int, plot_id: int, action: String) -> void:
 		return
 	var r: Array = main.plots[plot_id].remote_action(action, Net.player_name(id))
 	Net.reply_farm_action(id, r[0], r[1], r[2])
+	if str(r[1]) != "" or int(r[2]) > 0:
+		GameState.record_guest(Net.player_name(id))  # 记进明天的小镇日报
 	Net.push_farm(farm_states())
 
 
