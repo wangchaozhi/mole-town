@@ -135,6 +135,7 @@ func _ready() -> void:
 	sky = CanvasModulate.new()
 	add_child(sky)
 	add_child(Rain.new())
+	add_child(preload("res://scripts/world/post_fx.gd").new())
 	events = Events.new()
 	events.main = self
 	add_child(events)

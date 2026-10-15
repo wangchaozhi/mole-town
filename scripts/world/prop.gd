@@ -18,7 +18,7 @@ func _ready() -> void:
 		GameState.season_changed.connect(queue_redraw)
 	set_process(kind in ["fountain", "castle", "lamp", "house", "shop", "cottage"])
 	if kind == "lamp":
-		light = _make_light(Vector2(0, -105), 1.6, Color(1, 0.85, 0.55))
+		light = _make_light(Vector2(0, -105), 1.6, Color(1, 0.72, 0.38))
 	elif kind == "house" or kind == "shop" or kind == "cottage":
 		light = _make_light(Vector2(0, -70), 2.2, Color(1, 0.8, 0.5))
 
@@ -39,7 +39,7 @@ func _make_light(at: Vector2, scale_: float, col: Color) -> PointLight2D:
 	l.texture = tex
 	l.texture_scale = scale_
 	l.color = col
-	l.energy = 0.9
+	l.energy = 0.5  # 太亮会把浅色的广场照得发白
 	l.position = at
 	l.enabled = false
 	add_child(l)
