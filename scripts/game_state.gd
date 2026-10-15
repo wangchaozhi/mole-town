@@ -907,6 +907,13 @@ const NPC_INFO := {
 var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
 
 
+## 场景里某个组还能互动的节点数（落叶堆被翻过后会离开 interactable 组）
+func _count_group(g: String) -> int:
+	if not is_inside_tree():
+		return 0
+	return get_tree().get_nodes_in_group(g).filter(func(n): return n.is_in_group("interactable")).size()
+
+
 func is_lucky() -> bool:
 	return lucky_day == day
 
@@ -1128,6 +1135,20 @@ func festival_text() -> String:
 		lines.append("今天是%s的生日，送礼好感翻倍！" % b)
 	if is_lucky():
 		lines.append("【幸运日】收获容易多收，钓鱼容易钓到宝箱")
+	if merchant_here():
+		lines.append("旅行商人阿布在湖边摆摊（周末限定）")
+	var h := minutes / 60.0
+	match season():
+		0:
+			if lucky_day != day and _count_group("clovers") > 0:
+				lines.append("春天的草丛里藏着一棵四叶草，找找看？")
+		1:
+			if h >= 19.0 or h < 3.0:
+				lines.append("夏夜的湖边和树林里有萤火虫")
+		2, 3:
+			var left := _count_group("leaf_piles")
+			if left > 0:
+				lines.append("小镇里还有 %d 堆%s，扑进去翻翻看" % [left, "雪" if season() == 3 else "落叶"])
 	return "\n".join(lines)
 
 
