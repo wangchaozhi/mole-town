@@ -457,12 +457,13 @@ func _process(delta: float) -> void:
 		exp_bar.value = 100.0 * (GameState.player_exp - lo) / (hi - lo)
 	var nx := GameState.lahm_exp_to_next()
 	lahm_info.text = " Lv%d · %s" % [GameState.lahm_level, "满级" if nx < 0 else "还差%d" % nx]
-	if toast_timer > 0.0:
+	# 帮助面板打开时（比如第一次进游戏）提示先暂停，关掉后再显示，免得盖住面板标题
+	var toast_paused := help_panel.visible
+	toast_label.visible = toast_timer > 0.0 and not toast_paused
+	if toast_timer > 0.0 and not toast_paused:
 		toast_timer -= delta
 		toast_label.modulate.a = clampf(toast_timer / 0.5, 0.0, 1.0)
-		if toast_timer <= 0.0:
-			toast_label.visible = false
-	if not toast_queue.is_empty() and toast_timer <= 1.6:
+	if not toast_queue.is_empty() and toast_timer <= 1.6 and not toast_paused:
 		show_toast(toast_queue.pop_front())
 	if fishing:
 		fish.process(delta)
