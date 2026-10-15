@@ -146,7 +146,7 @@ func on_remote_interact(m) -> void:
 
 func _visit(m) -> void:
 	Net.visit(m.peer_id)
-	ui._on_chat("我来你家农场串门啦~")
+	ui.chat.send("我来你家农场串门啦~")
 
 
 func _build_visit_bar() -> void:
@@ -174,14 +174,14 @@ func _refresh_visit() -> void:
 
 
 func _greet(m) -> void:
-	ui._on_chat("你好呀，%s！" % m.display_name)
+	ui.chat.send("你好呀，%s！" % m.display_name)
 
 
 func _send_gift(m) -> void:
 	if GameState.spend_beans(10):
 		Net.send_gift(m.peer_id, 10)
 		ui.show_toast("送给 %s 10 摩尔豆" % m.display_name)
-		ui._on_chat("送你 10 摩尔豆~")
+		ui.chat.send("送你 10 摩尔豆~")
 	else:
 		ui.show_toast("摩尔豆不够啦")
 
