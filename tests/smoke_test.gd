@@ -99,29 +99,29 @@ func _run() -> void:
 	print("[钓鱼]")
 	ui.start_fishing(main.pond.position)
 	check(ui.fishing and p.fishing, "开始钓鱼")
-	ui.fish_timer = 0.0
+	ui.fish.fish_timer = 0.0
 	await _frames(2)
-	check(ui.fish_phase == 1, "鱼上钩")
-	ui.fish_marker = ui.fish_zone.x + ui.fish_zone.y / 2.0
-	ui.fish_speed = 0.0
+	check(ui.fish.fish_phase == 1, "鱼上钩")
+	ui.fish.fish_marker = ui.fish.fish_zone.x + ui.fish.fish_zone.y / 2.0
+	ui.fish.fish_speed = 0.0
 	var caught := 0
 	for f in GameState.FISH:
 		caught += GameState.count(f)
 	var beans_before := GameState.beans
-	ui._reel()
+	ui.fish._reel()
 	var caught2 := 0
 	for f in GameState.FISH:
 		caught2 += GameState.count(f)
 	# 约 9% 的概率钓到宝箱 / 漂流瓶（给摩尔豆而不是鱼），两种都算钓到东西
 	check(caught2 == caught + 1 or GameState.beans > beans_before, "在绿区收杆钓到东西")
-	ui._stop_fishing()
+	ui.fish._stop_fishing()
 	check(not p.fishing, "结束钓鱼")
 
 	b = GameState.beans
 	ui.start_fishing(main.pond.position)
-	ui._fish_treasure()
+	ui.fish._fish_treasure()
 	check(GameState.beans >= b + 100 and "lucky" in GameState.achievements, "钓到宝箱（摩尔豆 + 成就）")
-	ui._stop_fishing()
+	ui.fish._stop_fishing()
 
 	print("[商店]")
 	GameState.add_beans(500)

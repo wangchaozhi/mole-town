@@ -65,10 +65,10 @@ func _act() -> void:
 	var r := randf()
 	var p = main.player
 	if ui.fishing:
-		if ui.fish_phase == 1:
-			ui.fish_marker = ui.fish_zone.x + 0.01
-			ui.fish_speed = 0.0
-			ui._reel()
+		if ui.fish.fish_phase == 1:
+			ui.fish.fish_marker = ui.fish.fish_zone.x + 0.01
+			ui.fish.fish_speed = 0.0
+			ui.fish._reel()
 			_count("收杆")
 		return
 	if ui.dialog_panel.visible and randf() < 0.5:
