@@ -523,3 +523,23 @@ func _run() -> void:
 	bad.close()
 	GameState.beans = 0
 	check(GameState.load_game() and GameState.beans == snapshot["beans"] and GameState.loaded_from_backup, "主存档损坏时从备份恢复")
+	var SF = preload("res://scripts/data/save_fields.gd")
+	GameState.save_game()
+	var before_all := {}
+	for k in SF.FIELDS:
+		before_all[k] = JSON.stringify(GameState.get(k))
+	GameState.beans = 1
+	GameState.stats = {}
+	GameState.home = []
+	GameState.load_game()
+	var diff := []
+	for k in SF.FIELDS:
+		if JSON.stringify(GameState.get(k)) != before_all[k]:
+			diff.append(k)
+	check(diff.is_empty(), "所有存档字段读写一致" + ("（不一致：%s）" % ", ".join(diff) if not diff.is_empty() else ""))
+	var keep_name := GameState.player_name
+	GameState.music_volume = 0.3
+	GameState.best_catch = 99
+	GameState.reset_game()
+	check(GameState.player_name == keep_name and is_equal_approx(GameState.music_volume, 0.3) and GameState.best_catch == 0 		and GameState.beans == 100 and GameState.count("seed_carrot") == 5 and GameState.tutorial_step == 0, "重置存档：清空进度、保留名字和设置")
+	GameState.music_volume = 0.6

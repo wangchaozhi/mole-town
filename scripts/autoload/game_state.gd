@@ -4,6 +4,7 @@ extends Node
 const ItemData = preload("res://scripts/data/items.gd")
 const ProgressData = preload("res://scripts/data/progress.gd")
 const StoryData = preload("res://scripts/data/story.gd")
+const SaveFields = preload("res://scripts/data/save_fields.gd")
 
 signal beans_changed
 signal inventory_changed
@@ -90,9 +91,7 @@ func _ready() -> void:
 		if a.begins_with("--profile="):
 			save_path = "user://mole_save_%s.json" % a.substr(10).validate_filename()
 	if not load_game():
-		is_new_player = true
-		tutorial_step = 0
-		inventory = {"seed_carrot": 5, "lahm_fruit": 2}
+		_give_starter_kit()
 		new_quest()
 	if player_name == "":
 		player_name = "小摩尔%d" % (randi() % 900 + 100)
@@ -292,13 +291,9 @@ func claim_quest() -> int:
 
 func save_game() -> void:
 	get_tree().call_group("plots", "store_state")
-	var data := {
-		"beans": beans, "inventory": inventory, "selected_seed": selected_seed,
-		"hat": hat, "title": title, "owned_hats": owned_hats, "rod_level": rod_level, "has_sprinkler": has_sprinkler, "has_greenhouse": has_greenhouse, "lahm_acc": lahm_acc, "owned_lahm_accs": owned_lahm_accs, "lahm_hunger": lahm_hunger, "lahm_exp": lahm_exp, "player_exp": player_exp, "player_level": player_level, "lahm_level": lahm_level, "lahm_hide_day": lahm_hide_day, "leaf_day": leaf_day, "lucky_day": lucky_day,
-		"day": day, "minutes": minutes, "quest": quest, "quests_done": quests_done, "help_today": help_today, "tutorial_step": tutorial_step, "story_step": story_step, "story_count": story_count, "weekly_week": weekly_week, "weekly_base": weekly_base, "weekly_claimed": weekly_claimed, "best_catch": best_catch, "contest_day": contest_day, "contest_count": contest_count, "catch_day": catch_day, "catch_plays": catch_plays, "collection": collection, "fish_records": fish_records, "day_log": day_log, "stats": stats, "achievements": achievements, "last_signin": last_signin, "signin_streak": signin_streak, "music_volume": music_volume, "sfx_volume": sfx_volume, "ui_scale": ui_scale,
-		"player_name": player_name, "body_color": body_color,
-		"plots": plots, "home": home, "board": board, "mail": mail, "npc_affinity": npc_affinity, "npc_gift_day": npc_gift_day, "saved_at": Time.get_unix_time_from_system(),
-	}
+	var data := {"saved_at": Time.get_unix_time_from_system()}
+	for k in SaveFields.FIELDS:
+		data[k] = get(k)
 	_write_save(JSON.stringify(data))
 
 
@@ -311,98 +306,46 @@ func load_game() -> bool:
 			return false
 		push_warning("主存档损坏，已从备份恢复")
 		loaded_from_backup = true
-	beans = int(data.get("beans", 100))
-	inventory = {}
-	var inv: Dictionary = data.get("inventory", {})
-	for k in inv:
-		inventory[k] = int(inv[k])
-	selected_seed = str(data.get("selected_seed", "carrot"))
-	hat = str(data.get("hat", "none"))
-	title = str(data.get("title", ""))
-	owned_hats = data.get("owned_hats", ["none"])
-	rod_level = clampi(int(data.get("rod_level", 0)), 0, 2)
-	has_sprinkler = bool(data.get("has_sprinkler", false))
-	has_greenhouse = bool(data.get("has_greenhouse", false))
-	lahm_acc = str(data.get("lahm_acc", "none"))
-	owned_lahm_accs = data.get("owned_lahm_accs", ["none"])
-	if not LAHM_ACCS.has(lahm_acc):
-		lahm_acc = "none"
-	lahm_hunger = float(data.get("lahm_hunger", 80.0))
-	lahm_exp = int(data.get("lahm_exp", 0))
-	lahm_hide_day = int(data.get("lahm_hide_day", -1))
-	leaf_day = int(data.get("leaf_day", -1))
-	lucky_day = int(data.get("lucky_day", -1))
-	player_exp = int(data.get("player_exp", 0))
-	player_level = clampi(int(data.get("player_level", 1)), 1, MAX_LEVEL)
-	lahm_level = clampi(int(data.get("lahm_level", 1)), 1, LAHM_LEVELS.size())
-	day = int(data.get("day", 1))
-	minutes = float(data.get("minutes", 480.0))
-	quest = data.get("quest", {})
-	quests_done = int(data.get("quests_done", 0))
-	help_today = int(data.get("help_today", 0))
-	tutorial_step = int(data.get("tutorial_step", -1))
-	story_step = int(data.get("story_step", -2))
-	story_count = int(data.get("story_count", 0))
-	weekly_week = int(data.get("weekly_week", -1))
-	weekly_base = int(data.get("weekly_base", 0))
-	weekly_claimed = bool(data.get("weekly_claimed", false))
-	best_catch = int(data.get("best_catch", 0))
-	contest_day = int(data.get("contest_day", -1))
-	contest_count = int(data.get("contest_count", 0))
-	catch_day = int(data.get("catch_day", -1))
-	catch_plays = int(data.get("catch_plays", 0))
-	collection = {}
-	var col: Dictionary = data.get("collection", {})
-	for k in col:
-		collection[k] = int(col[k])
-	day_log = {}
-	var td: Dictionary = data.get("day_log", {})
-	for k in td:
-		day_log[k] = int(td[k])
-	fish_records = {}
-	var fr: Dictionary = data.get("fish_records", {})
-	for k in fr:
-		if FISH.has(k):
-			fish_records[k] = int(fr[k])
-	stats = {}
-	var st: Dictionary = data.get("stats", {})
-	for k in st:
-		stats[k] = int(st[k])
-	achievements = data.get("achievements", [])
-	last_signin = str(data.get("last_signin", ""))
-	signin_streak = int(data.get("signin_streak", 0))
-	music_volume = clampf(float(data.get("music_volume", 0.6)), 0.0, 1.0)
-	sfx_volume = clampf(float(data.get("sfx_volume", 0.8)), 0.0, 1.0)
-	ui_scale = clampf(float(data.get("ui_scale", 1.0)), 0.8, 1.4)
-	plots = data.get("plots", {})
-	mail = []
-	for mm in data.get("mail", []):
-		if typeof(mm) == TYPE_DICTIONARY:
-			mail.append({"from": str(mm.get("from", "")), "text": str(mm.get("text", "")), "gift": str(mm.get("gift", "")),
-				"n": int(mm.get("n", 0)), "read": bool(mm.get("read", true)), "day": int(mm.get("day", 1))})
-	board = []
-	for m in data.get("board", []):
-		if typeof(m) == TYPE_DICTIONARY:
-			board.append({"name": str(m.get("name", "")).left(10), "text": str(m.get("text", "")).left(40), "day": int(m.get("day", 1))})
-	npc_affinity = {}
-	var na: Dictionary = data.get("npc_affinity", {})
-	for k in na:
-		npc_affinity[str(k)] = int(na[k])
-	npc_gift_day = {}
-	var nd: Dictionary = data.get("npc_gift_day", {})
-	for k in nd:
-		npc_gift_day[str(k)] = int(nd[k])
-	home = []
-	for fe in data.get("home", []):
-		if typeof(fe) == TYPE_DICTIONARY and FURNITURE.has(str(fe.get("id", ""))):
-			home.append({"id": str(fe["id"]), "x": float(fe.get("x", 0)), "y": float(fe.get("y", 0))})
-	player_name = str(data.get("player_name", "")).left(10)
-	body_color = str(data.get("body_color", ""))
+	for k in SaveFields.FIELDS:
+		set(k, SaveFields.coerce(k, data.get(k), SaveFields.FIELDS[k][0]))
+	_sanitize_loaded()
 	var now := Time.get_unix_time_from_system()
 	offline_seconds = clampf(now - float(data.get("saved_at", now)), 0.0, 6.0 * 3600.0)
 	if quest.is_empty():
 		new_quest()
 	return true
+
+
+## 读档后的校验：数值范围、已经不存在的物品 / 家具、列表里每一项的格式（防止老存档或改坏的存档）
+func _sanitize_loaded() -> void:
+	rod_level = clampi(rod_level, 0, 2)
+	player_level = clampi(player_level, 1, MAX_LEVEL)
+	lahm_level = clampi(lahm_level, 1, LAHM_LEVELS.size())
+	music_volume = clampf(music_volume, 0.0, 1.0)
+	sfx_volume = clampf(sfx_volume, 0.0, 1.0)
+	ui_scale = clampf(ui_scale, 0.8, 1.4)
+	player_name = player_name.left(10)
+	if not LAHM_ACCS.has(lahm_acc):
+		lahm_acc = "none"
+	for k in fish_records.keys():
+		if not FISH.has(k):
+			fish_records.erase(k)
+	var clean_mail := []
+	for mm in mail:
+		if typeof(mm) == TYPE_DICTIONARY:
+			clean_mail.append({"from": str(mm.get("from", "")), "text": str(mm.get("text", "")), "gift": str(mm.get("gift", "")),
+				"n": int(mm.get("n", 0)), "read": bool(mm.get("read", true)), "day": int(mm.get("day", 1))})
+	mail = clean_mail
+	var clean_board := []
+	for m in board:
+		if typeof(m) == TYPE_DICTIONARY:
+			clean_board.append({"name": str(m.get("name", "")).left(10), "text": str(m.get("text", "")).left(40), "day": int(m.get("day", 1))})
+	board = clean_board
+	var clean_home := []
+	for fe in home:
+		if typeof(fe) == TYPE_DICTIONARY and FURNITURE.has(str(fe.get("id", ""))):
+			clean_home.append({"id": str(fe["id"]), "x": float(fe.get("x", 0)), "y": float(fe.get("y", 0))})
+	home = clean_home
 
 
 # ---------- 天气 / 昼夜 ----------
@@ -454,44 +397,12 @@ func reset_game() -> void:
 	for p in [save_path, save_path + ".bak", save_path + ".tmp"]:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
-	beans = 100
-	inventory = {"seed_carrot": 5, "lahm_fruit": 2}
-	selected_seed = "carrot"
-	hat = "none"
-	title = ""
-	owned_hats = ["none"]
-	lahm_acc = "none"
-	owned_lahm_accs = ["none"]
-	rod_level = 0
-	has_sprinkler = false
-	has_greenhouse = false
-	lahm_hunger = 80.0
-	lahm_exp = 0
-	lahm_hide_day = -1
-	leaf_day = -1
-	lucky_day = -1
-	lahm_level = 1
-	player_exp = 0
-	player_level = 1
-	day = 1
-	minutes = 480.0
-	quests_done = 0
-	plots = {}
-	help_today = 0
-	home = []
+	for k in SaveFields.FIELDS:
+		var f: Array = SaveFields.FIELDS[k]
+		if not f[1]:
+			set(k, SaveFields.coerce(k, null, f[0]))
+	_give_starter_kit()
 	offline_seconds = 0.0
-	collection = {}
-	day_log = {}
-	fish_records = {}
-	npc_affinity = {}
-	npc_gift_day = {}
-	stats = {}
-	board = []
-	tutorial_step = 0
-	mail = []
-	story_step = -2
-	story_count = 0
-	achievements = []
 	raining = false
 	weather_timer = 60.0
 	sky = ""
@@ -499,6 +410,13 @@ func reset_game() -> void:
 	beans_changed.emit()
 	inventory_changed.emit()
 	hat_changed.emit()
+
+
+## 新玩家（第一次进游戏 / 重置存档）：开新手引导，送几颗萝卜种子和拉姆果
+func _give_starter_kit() -> void:
+	is_new_player = true
+	tutorial_step = 0
+	inventory = {"seed_carrot": 5, "lahm_fruit": 2}
 
 
 # ---------- 图鉴 / 成就 ----------

@@ -79,6 +79,8 @@
 - [x] 重构 2/4：45 个脚本按功能分目录：autoload / data / world / entities / events / ui / util
 - [x] 重构 3/4：ui.gd 从 1402 行拆到约 800 行，新增 ui_fishing（钓鱼）、ui_net（联机面板 / 玩家菜单 / 串门）、ui_npc（NPC 对话 / 扭蛋 / 国王挑战）、ui_chat（聊天）
 - [x] 重构 4/4：tools/check.sh（静态检查 + 冒烟测试 + 浸泡测试）、GitHub Actions 自动跑检查、.editorconfig
+- [x] 重构：main.gd 的联机同步拆成 world/main_net.gd（866 → 640 行）；界面主题拆到 util/ui_theme.gd
+- [x] 重构：存档改成字段表驱动（data/save_fields.gd：每个字段登记一次默认值和「重置时是否保留」），保存 / 读取 / 重置都从表生成，读档校验集中在 _sanitize_loaded；顺带修正「重置存档」没有清掉接果子最高分、每周挑战、钓鱼大赛进度；新增测试：所有字段存读一致、重置后保留名字和设置
 
 ## 待办（大致按优先级）
 

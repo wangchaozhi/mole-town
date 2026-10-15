@@ -67,9 +67,11 @@ scripts/
 ├── data/       纯数据表（GameState 里有同名常量指向这里）
 │   ├── items.gd        作物、鱼、帽子、家具、料理、拉姆饰品、鱼竿、旅行商人的货
 │   ├── progress.gd     成就、新手引导、国王的每周挑战
-│   └── story.gd        NPC 喜好、信件、主线剧情
+│   ├── story.gd        NPC 喜好、信件、主线剧情
+│   └── save_fields.gd  存档字段表（新加要存档的变量在这里登记一行）
 ├── world/      场景和地图上的东西
-│   ├── main.gd         搭建场景、处理点击、昼夜、房间切换、远程玩家管理
+│   ├── main.gd         搭建场景、处理点击、昼夜、小院摆放、传送、房间切换
+│   ├── main_net.gd     联机同步：远程玩家、移动 / 聊天 / 送礼、串门农田同步、一起跳舞
 │   ├── world.gd / prop.gd / rain.gd          地面、建筑装饰、下雨下雪起风起雾
 │   ├── plot.gd / greenhouse.gd / sprinkler.gd 农田、温室、洒水器
 │   ├── pond.gd / stove.gd / gacha.gd / board.gd / gate.gd   钓鱼湖、小厨房、扭蛋机、留言板、城堡大门
@@ -84,9 +86,11 @@ scripts/
 ├── ui/         界面
 │   ├── ui.gd           界面主体：状态栏、背包、对话、聊天、钓鱼、联机面板，并创建下面的模块
 │   ├── ui_shop.gd / ui_progress.gd / ui_activities.gd / ui_profile.gd / ui_kitchen.gd / ui_mail.gd
+│   ├── ui_fishing.gd / ui_net.gd / ui_npc.gd / ui_chat.gd   钓鱼、联机面板、NPC 对话、聊天
 │   └── minimap.gd / minigame.gd
-└── util/draw_util.gd   画椭圆、圆环、文字、爱心的小工具
+└── util/               draw_util.gd 画图小工具、ui_theme.gd 界面主题和中文字体
 tests/          冒烟测试 smoke_test.tscn、浸泡测试 soak_test.tscn
+tools/check.sh  提交前检查（CI 也用它）
 ```
 
 新增作物：在 `scripts/data/items.gd` 的 `CROPS` 里加一行，再在 `scripts/world/plot.gd` 的 `_draw_ripe` 里画出成熟的样子。
