@@ -1,7 +1,7 @@
 extends Node2D
 ## 小屋相关的互动点：屋外的门、屋里的出口、床、衣柜、奖杯架。互动交给主场景处理。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var kind := "home_door"
 

@@ -10,9 +10,9 @@ config/features=PackedStringArray("4.7")
 
 [autoload]
 
-GameState="*res://scripts/game_state.gd"
-Net="*res://scripts/net.gd"
-Sfx="*res://scripts/sfx.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+Net="*res://scripts/autoload/net.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
 
 [display]
 

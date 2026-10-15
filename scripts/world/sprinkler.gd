@@ -1,7 +1,7 @@
 extends Node2D
 ## 农场中间的自动洒水器（在商店「工具」里买）：每 40 秒转一圈喷水，给所有缺水的作物浇水。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const INTERVAL := 40.0
 
 var main = null

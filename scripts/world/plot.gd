@@ -2,7 +2,7 @@ extends Node2D
 ## 一块农田：播种 -> 浇水 -> 生长 -> 收获，偶尔会有害虫。
 ## 串门时显示好友农田的状态（remote），点击会把操作发给好友处理。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var plot_id := 0
 var crop := ""

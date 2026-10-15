@@ -158,7 +158,7 @@ func _build_minigame() -> void:
 	title.add_child(tl)
 	title.add_child(ui._button("离开", _close_minigame))
 	v.add_child(title)
-	game_view = preload("res://scripts/minigame.gd").new()
+	game_view = preload("res://scripts/ui/minigame.gd").new()
 	game_view.finished.connect(_on_minigame_finished)
 	v.add_child(game_view)
 	game_result = HBoxContainer.new()

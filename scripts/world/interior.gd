@@ -2,7 +2,7 @@ extends Node2D
 ## 「我的小屋」室内：放在地图右边看不到的地方（世界坐标 x≈3000），进门时镜头切过来。
 ## 这里只画墙、地板、窗户和地毯；床、衣柜、奖杯架、门由 spot.gd 负责互动。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const ROOM := Rect2(3000, 200, 480, 320)  # 墙 + 地板
 const VIEW := Rect2(2600, 0, 1280, 720)  # 进屋后镜头能看到的范围
 

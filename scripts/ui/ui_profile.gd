@@ -162,7 +162,7 @@ func _build_creator() -> void:
 	var preview := Control.new()
 	preview.custom_minimum_size = Vector2(170, 180)
 	hb.add_child(preview)
-	preview_mole = preload("res://scripts/mole.gd").new()
+	preview_mole = preload("res://scripts/entities/mole.gd").new()
 	preview_mole.position = Vector2(85, 160)
 	preview_mole.scale = Vector2(2.2, 2.2)
 	preview.add_child(preview_mole)

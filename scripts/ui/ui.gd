@@ -93,7 +93,7 @@ func _ready() -> void:
 	_build_seed_bar()
 	_build_chat()
 	_build_dialog()
-	shop = preload("res://scripts/ui_shop.gd").new()
+	shop = preload("res://scripts/ui/ui_shop.gd").new()
 	shop.ui = self
 	add_child(shop)
 	shop.build()
@@ -101,23 +101,23 @@ func _ready() -> void:
 	_build_fish()
 	_build_net()
 	_build_visit_bar()
-	profile = preload("res://scripts/ui_profile.gd").new()
+	profile = preload("res://scripts/ui/ui_profile.gd").new()
 	profile.ui = self
 	add_child(profile)
 	profile.build()
-	progress = preload("res://scripts/ui_progress.gd").new()
+	progress = preload("res://scripts/ui/ui_progress.gd").new()
 	progress.ui = self
 	add_child(progress)
 	progress.build()
-	act = preload("res://scripts/ui_activities.gd").new()
+	act = preload("res://scripts/ui/ui_activities.gd").new()
 	act.ui = self
 	add_child(act)
 	act.build()
-	kitchen = preload("res://scripts/ui_kitchen.gd").new()
+	kitchen = preload("res://scripts/ui/ui_kitchen.gd").new()
 	kitchen.ui = self
 	add_child(kitchen)
 	kitchen.build()
-	mailui = preload("res://scripts/ui_mail.gd").new()
+	mailui = preload("res://scripts/ui/ui_mail.gd").new()
 	mailui.ui = self
 	add_child(mailui)
 	mailui.build()
@@ -1119,7 +1119,7 @@ func _build_minimap() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	minimap_panel.add_child(v)
-	var mm = preload("res://scripts/minimap.gd").new()
+	var mm = preload("res://scripts/ui/minimap.gd").new()
 	mm.main = get_parent()
 	v.add_child(mm)
 	var tip := _label("点击地图传送 · M 键隐藏", 12)

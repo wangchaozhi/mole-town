@@ -1,4 +1,4 @@
-extends "res://scripts/mole.gd"
+extends "res://scripts/entities/mole.gd"
 ## 玩家：点击地面移动，点击物体先走过去再互动。
 
 var pending = null

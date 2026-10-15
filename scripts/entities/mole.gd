@@ -3,7 +3,7 @@ extends Node2D
 
 signal arrived
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const EMOTES := {"wave": "挥手", "happy": "开心", "angry": "生气", "cry": "难过", "sing": "唱歌", "sleep": "睡觉"}
 
 var body_color := Color(0.58, 0.4, 0.27)

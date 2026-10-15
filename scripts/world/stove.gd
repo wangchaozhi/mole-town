@@ -1,7 +1,7 @@
 extends Node2D
 ## 广场边的小厨房：砖砌灶台和一口大锅，点击打开烹饪界面。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var t := 0.0
 var cooking := 0.0  # 刚做完菜时冒大团蒸汽

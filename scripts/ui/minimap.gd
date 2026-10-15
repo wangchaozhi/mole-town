@@ -1,7 +1,7 @@
 extends Control
 ## 小地图：显示小镇各区域和所有人的位置，点击地图上的位置可以直接传送过去。
 
-const World = preload("res://scripts/world.gd")
+const World = preload("res://scripts/world/world.gd")
 const WORLD_SIZE := Vector2(2400, 1400)
 const SCALE := 1.0 / 11.0
 

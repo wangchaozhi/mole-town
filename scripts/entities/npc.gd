@@ -1,4 +1,4 @@
-extends "res://scripts/mole.gd"
+extends "res://scripts/entities/mole.gd"
 ## NPC 摩尔：乐乐（任务）、店长（商店）、闲逛的小摩尔（聊天/提示）。
 ## 作息：22:00~6:00 回家睡觉（店长通宵营业），早上醒来回到原来的地方。
 

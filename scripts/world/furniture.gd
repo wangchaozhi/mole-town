@@ -1,7 +1,7 @@
 extends Node2D
 ## 小院家具：全部用代码绘制。自己院子里的家具可以点击移动 / 收起；串门时显示好友的家具（不可操作）。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var kind := "pot"
 var index := -1  # 在 GameState.home 里的下标；-1 = 好友的家具或摆放预览

@@ -1,7 +1,7 @@
 extends Node2D
 ## 农场右边的温室（在商店「工具」里买）：玻璃屋顶和框架画在地面层，里面 4 块地由 main.gd 放置。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const AREA := Rect2(2135, 880, 190, 300)
 
 

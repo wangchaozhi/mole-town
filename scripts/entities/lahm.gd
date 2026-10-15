@@ -3,7 +3,7 @@ extends Node2D
 ## 喂食和抚摸会增加亲密度，升级后拉姆会帮忙：
 ##   Lv2 饿得更慢  Lv3 帮你抓农场害虫  Lv4 偶尔找到宝物  Lv5 帮你给缺水的作物浇水（还会戴上小王冠）
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var player = null
 var t := 0.0

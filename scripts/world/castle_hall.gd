@@ -2,7 +2,7 @@ extends Node2D
 ## 城堡大厅：放在地图外（世界坐标 x≈3000, y≈1000），从城堡大门进来。
 ## 石砖地板、红地毯、王座、挂旗和火把；国王 NPC 和出口由 main.gd 放置。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const ROOM := Rect2(3000, 1000, 640, 400)
 const VIEW := Rect2(2680, 840, 1280, 720)
 

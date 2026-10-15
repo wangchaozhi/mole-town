@@ -1,4 +1,4 @@
-extends "res://scripts/mole.gd"
+extends "res://scripts/entities/mole.gd"
 ## 其他联机玩家在本地的化身：根据网络消息走路、钓鱼、说话。
 
 var peer_id := 0

@@ -3,10 +3,10 @@ extends CanvasLayer
 ##   夜晚流星雨 —— 22 点时一定概率出现，流星划过屏幕，点击流星许愿得奖励（每场最多 5 个愿望）
 ##   迷路的小拉姆 —— 每天早上 8 点一定概率出现在小镇某个角落（见 lost_lahm.gd）
 
-const LostLahm = preload("res://scripts/lost_lahm.gd")
-const Firefly = preload("res://scripts/firefly.gd")
-const LeafPile = preload("res://scripts/leaf_pile.gd")
-const Clover = preload("res://scripts/clover.gd")
+const LostLahm = preload("res://scripts/entities/lost_lahm.gd")
+const Firefly = preload("res://scripts/events/firefly.gd")
+const LeafPile = preload("res://scripts/events/leaf_pile.gd")
+const Clover = preload("res://scripts/events/clover.gd")
 const LEAF_SPOTS := [Vector2(480, 580), Vector2(860, 420), Vector2(1560, 660), Vector2(2050, 560), Vector2(300, 1000),
 	Vector2(1530, 990), Vector2(2200, 1180), Vector2(760, 900), Vector2(2010, 400), Vector2(200, 480)]
 const FIREFLY_SPOTS := [Vector2(240, 860), Vector2(700, 1150), Vector2(330, 1240), Vector2(150, 600), Vector2(420, 380),

@@ -4,7 +4,7 @@ extends Control
 
 signal finished(score: int)
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const DURATION := 30.0
 const W := 600.0
 const H := 380.0

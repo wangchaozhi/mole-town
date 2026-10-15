@@ -464,7 +464,7 @@ func _run() -> void:
 	GameState.day = leaf_day0
 	main.events.spawn_leaf_piles()  # 不是秋天了：清掉
 	GameState.stats["fireflies"] = 9
-	var ffly = preload("res://scripts/firefly.gd").new()
+	var ffly = preload("res://scripts/events/firefly.gd").new()
 	main.ysort.add_child(ffly)
 	var jar0 := GameState.count("furn_firefly_jar")
 	ffly.interact(p)

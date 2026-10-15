@@ -125,7 +125,7 @@ func _item_row(ids: Array) -> HBoxContainer:
 
 ## 图鉴图标：用代码画出作物 / 鱼，未获得时显示灰色剪影
 func _draw_item(c: Control, id: String, known: bool) -> void:
-	var D := preload("res://scripts/draw_util.gd")
+	var D := preload("res://scripts/util/draw_util.gd")
 	var m := c.size / 2.0
 	c.draw_circle(m, 27.0, Color(1, 1, 1, 0.7))
 	var gray := Color(0.6, 0.6, 0.6)
@@ -272,7 +272,7 @@ func _do_signin() -> void:
 
 ## 料理图标：碗装的汤 / 蛋糕 / 烤玉米 / 派 / 冰沙
 func _draw_dish(c: Control, m: Vector2, id: String, col: Color, known: bool) -> void:
-	var D := preload("res://scripts/draw_util.gd")
+	var D := preload("res://scripts/util/draw_util.gd")
 	var white := Color(0.97, 0.97, 1.0) if known else Color(0.7, 0.7, 0.7)
 	match id:
 		"strawberry_cake":

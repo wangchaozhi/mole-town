@@ -58,31 +58,38 @@ godot --path . -- --profile=2
 
 ## 代码结构
 
-| 文件 | 作用 |
-| --- | --- |
-| `scripts/game_state.gd` | 自动加载：摩尔豆、背包、任务、时间、存档、界面主题 |
-| `scripts/net.gd` | 自动加载：联机（ENet）、玩家名单、移动/聊天/送礼/串门同步 |
-| `scripts/sfx.gd` | 自动加载：代码合成的音效、背景音乐、雨声 |
-| `scripts/rain.gd` | 下雨画面效果 |
-| `scripts/main.gd` | 搭建场景、处理点击、昼夜变化、远程玩家管理 |
-| `scripts/ui.gd` | 界面主体：状态栏、背包、对话、聊天、钓鱼、联机面板、小地图，并创建下面几个界面模块 |
-| `scripts/ui_shop.gd` | 摩尔百货界面 |
-| `scripts/ui_progress.gd` | 图鉴、成就、每日签到 |
-| `scripts/ui_activities.gd` | 送礼物、接果子小游戏、留言板 |
-| `scripts/ui_profile.gd` | 设置、表情栏、捏脸 |
-| `scripts/ui_kitchen.gd` / `stove.gd` | 烹饪界面、小厨房灶台 |
-| `scripts/interior.gd` / `spot.gd` | 小屋室内和里面的床、衣柜、奖杯架、门 |
-| `scripts/castle_hall.gd` | 城堡大厅 |
-| `scripts/ui_mail.gd` | 信箱界面 |
-| `scripts/greenhouse.gd` / `sprinkler.gd` | 温室、自动洒水器 |
-| `scripts/mole.gd` | 摩尔角色基类（绘制、走路、气泡、钓鱼姿势） |
-| `scripts/player.gd` / `npc.gd` / `remote_mole.gd` | 玩家、NPC、其他联机玩家 |
-| `scripts/plot.gd` | 农田（含串门时显示好友农田） |
-| `scripts/furniture.gd` | 小院家具（绘制、移动、收起） |
-| `scripts/minimap.gd` / `minigame.gd` / `gate.gd` / `board.gd` / `festival_deco.gd` | 小地图、接果子小游戏、城堡大门、留言板、节日装饰 |
-| `scripts/lahm.gd` / `pond.gd` / `prop.gd` / `world.gd` | 拉姆、钓鱼湖、建筑装饰、地面 |
+```
+scripts/
+├── autoload/   自动加载的全局单例
+│   ├── game_state.gd   游戏状态与规则：摩尔豆、背包、任务、时间、天气、存档……（按功能分段）
+│   ├── net.gd          联机（ENet）：玩家名单、移动 / 聊天 / 送礼 / 串门同步、局域网发现
+│   └── sfx.gd          代码合成的音效、背景音乐、雨声
+├── data/       纯数据表（GameState 里有同名常量指向这里）
+│   ├── items.gd        作物、鱼、帽子、家具、料理、拉姆饰品、鱼竿、旅行商人的货
+│   ├── progress.gd     成就、新手引导、国王的每周挑战
+│   └── story.gd        NPC 喜好、信件、主线剧情
+├── world/      场景和地图上的东西
+│   ├── main.gd         搭建场景、处理点击、昼夜、房间切换、远程玩家管理
+│   ├── world.gd / prop.gd / rain.gd          地面、建筑装饰、下雨下雪起风起雾
+│   ├── plot.gd / greenhouse.gd / sprinkler.gd 农田、温室、洒水器
+│   ├── pond.gd / stove.gd / gacha.gd / board.gd / gate.gd   钓鱼湖、小厨房、扭蛋机、留言板、城堡大门
+│   ├── interior.gd / castle_hall.gd / spot.gd 小屋室内、城堡大厅、室内可点的地方
+│   └── furniture.gd / festival_deco.gd / tutorial_arrow.gd   小院家具、节日装饰、引导箭头
+├── entities/   角色
+│   ├── mole.gd         摩尔角色基类（绘制、走路、气泡、表情、帽子）
+│   ├── player.gd / npc.gd / remote_mole.gd   玩家、NPC、其他联机玩家
+│   └── lahm.gd / lost_lahm.gd                 拉姆、迷路的小拉姆
+├── events/     随机事件和季节小玩法
+│   └── events.gd / firefly.gd / leaf_pile.gd / clover.gd   流星雨、萤火虫、落叶堆 / 雪堆、四叶草
+├── ui/         界面
+│   ├── ui.gd           界面主体：状态栏、背包、对话、聊天、钓鱼、联机面板，并创建下面的模块
+│   ├── ui_shop.gd / ui_progress.gd / ui_activities.gd / ui_profile.gd / ui_kitchen.gd / ui_mail.gd
+│   └── minimap.gd / minigame.gd
+└── util/draw_util.gd   画椭圆、圆环、文字、爱心的小工具
+tests/          冒烟测试 smoke_test.tscn、浸泡测试 soak_test.tscn
+```
 
-新增作物：在 `game_state.gd` 的 `CROPS` 里加一行，再在 `plot.gd` 的 `_draw_ripe` 里画出成熟的样子。
+新增作物：在 `scripts/data/items.gd` 的 `CROPS` 里加一行，再在 `scripts/world/plot.gd` 的 `_draw_ripe` 里画出成熟的样子。
 
 ## 说明
 

@@ -1,7 +1,7 @@
 extends Node2D
 ## 钓鱼湖：点击湖面开始钓鱼。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var radius := Vector2(250, 140)
 var t := 0.0

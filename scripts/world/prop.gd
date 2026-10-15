@@ -1,7 +1,7 @@
 extends Node2D
 ## 场景装饰：树、房子、城堡、喷泉、路灯、栅栏、路牌……
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var kind := "tree"
 var text := ""

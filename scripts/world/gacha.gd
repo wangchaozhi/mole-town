@@ -1,7 +1,7 @@
 extends Node2D
 ## 广场边的扭蛋机：50 摩尔豆扭一次，能扭到摩尔豆、种子、拉姆果、家具，还有扭蛋限定的帽子（兔耳朵、小黄鸡）。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const BALL_COLORS := [Color(1, 0.45, 0.5), Color(0.45, 0.7, 1), Color(1, 0.85, 0.3), Color(0.5, 0.85, 0.5), Color(0.8, 0.55, 1)]
 
 var t := 0.0

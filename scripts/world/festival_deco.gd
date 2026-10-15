@@ -1,7 +1,7 @@
 extends Node2D
 ## 节日装饰：节日当天在广场四盏路灯之间挂上彩旗，中间挂节日横幅。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const CORNERS := [Vector2(1030, 440), Vector2(1370, 440), Vector2(1370, 770), Vector2(1030, 770)]
 const FLAG_COLORS := [Color(0.95, 0.3, 0.3), Color(1, 0.8, 0.2), Color(0.35, 0.7, 0.95), Color(0.5, 0.85, 0.4), Color(0.95, 0.5, 0.8)]
 

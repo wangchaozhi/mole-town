@@ -1,7 +1,7 @@
 extends Node2D
 ## 秋天的落叶堆 / 冬天的雪堆：点一下扑进去翻一翻，会找到摩尔豆、种子、拉姆果，偶尔还有南瓜灯 / 雪人。由 events.gd 每天早上生成。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 const LEAF_COLORS := [Color(0.92, 0.45, 0.12), Color(0.95, 0.7, 0.15), Color(0.8, 0.28, 0.12), Color(0.7, 0.45, 0.15)]
 const SNOW_COLORS := [Color(1, 1, 1), Color(0.92, 0.96, 1.0), Color(0.85, 0.92, 1.0)]
 

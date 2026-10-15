@@ -2,7 +2,7 @@ extends Node2D
 ## 随机事件「迷路的小拉姆」：白天偶尔有一只蓝色的小拉姆躲在小镇某个角落。
 ## 点击它后它会跟着你，带到乐乐身边就算送回家，有奖励。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 var main = null
 var following := false

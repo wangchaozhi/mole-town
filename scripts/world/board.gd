@@ -1,7 +1,7 @@
 extends Node2D
 ## 广场留言板：点击查看和发布留言。联机时显示房主那边的留言板，所有人都能看到。
 
-const D = preload("res://scripts/draw_util.gd")
+const D = preload("res://scripts/util/draw_util.gd")
 
 
 func _ready() -> void:
