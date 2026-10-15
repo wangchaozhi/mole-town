@@ -469,6 +469,13 @@ func _run() -> void:
 	var jar0 := GameState.count("furn_firefly_jar")
 	ffly.interact(p)
 	check(GameState.count("firefly") >= 1 and GameState.count("furn_firefly_jar") == jar0 + 1 and "fireflies" in GameState.achievements, "抓第 10 只萤火虫得到萤火虫灯和成就")
+	GameState.add_beans(GameState.GACHA_PRICE)
+	var gacha_r := GameState.gacha_spin()
+	check(gacha_r["ok"] and int(GameState.stats["gacha"]) >= 1 and get_tree().get_first_node_in_group("gacha") != null, "扭蛋机扭一次")
+	var poor := GameState.beans
+	GameState.beans = 10
+	check(not GameState.gacha_spin()["ok"] and GameState.beans == 10, "豆子不够不能扭蛋")
+	GameState.beans = poor
 	GameState.set_title("giant")
 	check(GameState.title == "giant" and p.title_label != null and p.title_label.text.contains("巨无霸"), "佩戴成就称号")
 	GameState.set_title("not_done_xyz")

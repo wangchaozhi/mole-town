@@ -43,6 +43,8 @@ const HATS := {
 	"crown": {"name": "小王冠", "price": 500, "level": 6},
 	"wizard": {"name": "魔法帽", "price": 800, "level": 8},
 	"star_pin": {"name": "星星发卡", "price": 0, "level": 1, "shop": false},  # 主线剧情奖励
+	"bunny": {"name": "兔耳朵", "price": 0, "level": 1, "shop": false},  # 扭蛋限定
+	"chick": {"name": "小黄鸡", "price": 0, "level": 1, "shop": false},  # 扭蛋限定
 }
 
 const LAHM_FRUIT_PRICE := 15
@@ -904,6 +906,47 @@ var npc_affinity: Dictionary = {}  # NPC 名字 -> 好感度
 
 func is_lucky() -> bool:
 	return lucky_day == day
+
+
+# ---------- 扭蛋机 ----------
+
+const GACHA_PRICE := 50
+
+
+## 扭一次：扣 50 豆，返回 {"ok", "text"}。限定帽子重复时换成 150 豆
+func gacha_spin() -> Dictionary:
+	if not spend_beans(GACHA_PRICE):
+		return {"ok": false, "text": "摩尔豆不够啦！扭一次要 %d 豆" % GACHA_PRICE}
+	stats["gacha"] = int(stats.get("gacha", 0)) + 1
+	var r := randf()
+	var text := ""
+	if r < 0.06:
+		var hid := "bunny" if r < 0.03 else "chick"
+		if hid in owned_hats:
+			add_beans(150)
+			text = "扭到了%s！不过你已经有了，换成 150 摩尔豆" % HATS[hid]["name"]
+		else:
+			owned_hats.append(hid)
+			text = "大奖！扭到了扭蛋限定帽子「%s」！去小屋衣柜或商店帽子页戴上吧" % HATS[hid]["name"]
+	elif r < 0.16:
+		var furn: Array = FURNITURE.keys().filter(func(f): return FURNITURE[f].get("shop", true) and not FURNITURE[f].has("season"))
+		var fid: String = furn.pick_random()
+		add_item("furn_" + fid)
+		text = "扭到了家具「%s」！" % FURNITURE[fid]["name"]
+	elif r < 0.36:
+		add_item("lahm_fruit", 3)
+		text = "扭到了拉姆果 ×3"
+	elif r < 0.66:
+		var seeds: Array = CROPS.keys().filter(func(c): return is_unlocked(c))
+		var sid: String = "seed_" + str(seeds.pick_random())
+		add_item(sid, 3)
+		text = "扭到了%s ×3" % item_name(sid)
+	else:
+		var n := randi_range(20, 80)
+		add_beans(n)
+		text = "扭到了 %d 摩尔豆" % n
+	check_achievements()
+	return {"ok": true, "text": text}
 
 
 ## 今天过生日的 NPC（一年 4 季 × 7 天 = 28 天，每个 NPC 有一天生日），没有则返回 ""

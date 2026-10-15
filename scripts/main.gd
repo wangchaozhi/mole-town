@@ -345,6 +345,9 @@ func _build_props() -> void:
 	var arrow = TutorialArrow.new()
 	arrow.main = self
 	add_child(arrow)
+	var gacha = preload("res://scripts/gacha.gd").new()
+	gacha.position = Vector2(1650, 660)
+	ysort.add_child(gacha)
 	var stove = Stove.new()
 	stove.position = Vector2(870, 800)
 	ysort.add_child(stove)

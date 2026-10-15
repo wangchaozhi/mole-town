@@ -275,6 +275,18 @@ func _draw_hat(b: Vector2) -> void:
 				star.append(sc + Vector2(cos(a), sin(a)) * (8.0 if i % 2 == 0 else 3.5))
 			draw_colored_polygon(star, Color(1, 0.88, 0.2))
 			draw_circle(sc, 2.0, Color(1, 1, 0.8))
+		"bunny":
+			for sx in [-1.0, 1.0]:
+				var base := b + Vector2(sx * 7.0, 0)
+				D.ell(self, base + Vector2(sx * 3.0, -16), Vector2(5.5, 14), Color(1, 1, 1))
+				D.ell(self, base + Vector2(sx * 3.0, -15), Vector2(2.5, 10), Color(1, 0.7, 0.78))
+		"chick":
+			var cc := b + Vector2(0, -8)
+			D.ell(self, cc, Vector2(11, 9), Color(1, 0.88, 0.25))
+			draw_circle(cc + Vector2(facing * 6.0, -6), 6.0, Color(1, 0.9, 0.3))
+			draw_circle(cc + Vector2(facing * 8.0, -7), 1.4, Color(0.1, 0.1, 0.1))
+			draw_colored_polygon(PackedVector2Array([cc + Vector2(facing * 11.0, -6), cc + Vector2(facing * 16.0, -4), cc + Vector2(facing * 11.0, -3)]), Color(1, 0.55, 0.1))
+			D.ell(self, cc + Vector2(-facing * 4.0, 0), Vector2(5, 3), Color(0.95, 0.78, 0.2))
 		"crown":
 			var pts := PackedVector2Array([b + Vector2(-13, 2), b + Vector2(13, 2), b + Vector2(14, -14),
 				b + Vector2(7, -6), b + Vector2(0, -17), b + Vector2(-7, -6), b + Vector2(-14, -14)])

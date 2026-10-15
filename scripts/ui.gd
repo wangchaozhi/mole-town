@@ -1137,6 +1137,21 @@ func open_kitchen() -> void:
 	kitchen.open()
 
 
+func open_gacha() -> void:
+	show_dialog("扭蛋机", "%d 摩尔豆扭一次！可能扭到：摩尔豆、种子、拉姆果、家具……\n还有扭蛋限定的帽子「兔耳朵」和「小黄鸡」哦！（你有 %d 豆）" % [GameState.GACHA_PRICE, GameState.beans],
+		[["扭一次", _gacha_spin], ["下次再来", _noop]])
+
+
+func _gacha_spin() -> void:
+	var r := GameState.gacha_spin()
+	if r["ok"]:
+		Sfx.play("gift")
+		var g = get_tree().get_first_node_in_group("gacha")
+		if g != null:
+			g.play_spin()
+	show_dialog("扭蛋机", str(r["text"]), [["再扭一次", _gacha_spin], ["不扭了", _noop]])
+
+
 func _refresh_tutorial() -> void:
 	tut_box.visible = GameState.tutorial_active()
 	if tut_box.visible:
